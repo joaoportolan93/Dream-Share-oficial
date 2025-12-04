@@ -5,6 +5,9 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import HomeAlternative from './pages/HomeAlternative';
+import Saved from './pages/Saved';
+import Communities from './pages/Communities';
+import CommunityPage from './pages/CommunityPage';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -32,6 +35,21 @@ function App() {
                 <Route path="/explore" element={
                     <Layout>
                         <HomeAlternative />
+                    </Layout>
+                } />
+                <Route path="/saved" element={
+                    <Layout>
+                        <Saved />
+                    </Layout>
+                } />
+                <Route path="/communities" element={
+                    <Layout>
+                        <Communities />
+                    </Layout>
+                } />
+                <Route path="/community/:id" element={
+                    <Layout>
+                        <CommunityPage />
                     </Layout>
                 } />
 

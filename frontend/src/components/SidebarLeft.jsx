@@ -9,7 +9,7 @@ const SidebarLeft = () => {
     const menuItems = [
         { icon: FaHome, label: 'Início', path: '/' },
         { icon: FaMoon, label: 'Explorar', path: '/explore' },
-        { icon: FaUserFriends, label: 'Amigos', path: '/friends' },
+        { icon: FaUserFriends, label: 'Comunidades', path: '/communities' },
         { icon: FaBookmark, label: 'Salvos', path: '/saved' },
         { icon: FaStar, label: 'Destaques', path: '/highlights' },
     ];
@@ -30,8 +30,8 @@ const SidebarLeft = () => {
                         key={item.path}
                         to={item.path}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${isActive(item.path)
-                                ? 'bg-primary-light text-primary'
-                                : 'text-text-secondary hover:bg-background-input hover:text-text-main'
+                            ? 'bg-primary-light text-primary'
+                            : 'text-text-secondary hover:bg-background-input hover:text-text-main'
                             }`}
                     >
                         <item.icon size={20} className={isActive(item.path) ? 'text-primary' : 'text-gray-400'} />
