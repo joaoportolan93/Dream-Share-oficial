@@ -1,6 +1,7 @@
 import React from 'react';
 import { FaImage, FaSmile, FaMapMarkerAlt, FaMusic } from 'react-icons/fa';
 import { MdGif } from 'react-icons/md';
+import Post from '../components/Post';
 
 const Home = () => {
     return (
@@ -31,11 +32,6 @@ const Home = () => {
                         className="w-[40px] h-[40px] rounded-full object-cover"
                     />
                     <div className="flex-1">
-                        <input
-                            type="text"
-                            placeholder="Qual o título do seu sonho?"
-                            className="w-full h-[45px] bg-background-input rounded-lg px-4 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                        />
                         <textarea
                             placeholder="Descreva seu sonho em detalhes... O que aconteceu? Como você se sentiu?"
                             className="w-full min-h-[120px] bg-background-input rounded-lg p-4 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/30"
@@ -58,35 +54,19 @@ const Home = () => {
             </div>
 
             {/* Feed Posts Placeholder */}
-            {[1, 2].map((post) => (
-                <div key={post} className="bg-white rounded-xl p-5 shadow-card">
-                    <div className="flex items-center gap-3 mb-4">
-                        <img
-                            src={`https://randomuser.me/api/portraits/women/${post + 20}.jpg`}
-                            alt="User"
-                            className="w-[40px] h-[40px] rounded-full object-cover"
-                        />
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-text-main">ana_sleep</span>
-                            <span className="text-xs text-text-secondary">5 horas atrás</span>
-                        </div>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-text-main mb-2">Sonho Lúcido na Floresta</h3>
-                    <p className="text-text-secondary text-sm leading-relaxed mb-4">
-                        Hoje tive um sonho incrível onde eu conseguia controlar tudo ao meu redor.
-                        As árvores mudavam de cor conforme eu tocava nelas...
-                    </p>
-
-                    <div className="w-full h-[250px] bg-gray-200 rounded-lg mb-4 object-cover overflow-hidden">
-                        <img src={`https://picsum.photos/seed/${post}/600/300`} alt="Dream" className="w-full h-full object-cover" />
-                    </div>
-
-                    <div className="flex gap-2 mb-4">
-                        <span className="text-xs text-accent-blue cursor-pointer hover:underline">#sonholucido</span>
-                        <span className="text-xs text-accent-blue cursor-pointer hover:underline">#natureza</span>
-                    </div>
-                </div>
+            {[1, 2].map((postId) => (
+                <Post
+                    key={postId}
+                    post={{
+                        userName: "ana_sleep",
+                        userImage: `https://randomuser.me/api/portraits/women/${postId + 20}.jpg`,
+                        time: "5 horas atrás",
+                        title: "Sonho Lúcido na Floresta",
+                        content: "Hoje tive um sonho incrível onde eu conseguia controlar tudo ao meu redor. As árvores mudavam de cor conforme eu tocava nelas...",
+                        image: `https://picsum.photos/seed/${postId}/600/300`,
+                        tags: ["#sonholucido", "#natureza"]
+                    }}
+                />
             ))}
         </div>
     );
