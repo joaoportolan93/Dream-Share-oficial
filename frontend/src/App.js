@@ -9,6 +9,7 @@ import Saved from './pages/Saved';
 import Communities from './pages/Communities';
 import CommunityPage from './pages/CommunityPage';
 import NotFound from './pages/NotFound';
+import ExplorePage from './pages/ExplorePage';
 
 function App() {
     return (
@@ -33,8 +34,8 @@ function App() {
                     </Layout>
                 } />
                 <Route path="/explore" element={
-                    <Layout>
-                        <HomeAlternative />
+                    <Layout hideRightSidebar={true}>
+                        <ExplorePage />
                     </Layout>
                 } />
                 <Route path="/saved" element={
