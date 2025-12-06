@@ -22,7 +22,7 @@ const SidebarLeft = () => {
     ];
 
     return (
-        <aside className="hidden md:flex flex-col w-[250px] fixed left-0 top-[60px] bottom-0 bg-white p-5 overflow-y-auto border-r border-border">
+        <aside className="hidden md:flex flex-col w-[250px] fixed left-0 top-[60px] bottom-0 bg-white dark:bg-cosmic-bg dark:border-white/10 p-5 overflow-y-auto border-r border-border transition-colors duration-300">
             {/* Navigation Menu */}
             <nav className="flex flex-col gap-2 mb-6">
                 {menuItems.map((item) => (
@@ -30,8 +30,8 @@ const SidebarLeft = () => {
                         key={item.path}
                         to={item.path}
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${isActive(item.path)
-                            ? 'bg-primary-light text-primary'
-                            : 'text-text-secondary hover:bg-background-input hover:text-text-main'
+                            ? 'bg-primary-light text-primary dark:bg-white/10 dark:text-primary-light'
+                            : 'text-text-secondary dark:text-gray-400 hover:bg-background-input dark:hover:bg-white/5 hover:text-text-main dark:hover:text-white'
                             }`}
                     >
                         <item.icon size={20} className={isActive(item.path) ? 'text-primary' : 'text-gray-400'} />
@@ -48,7 +48,7 @@ const SidebarLeft = () => {
 
             {/* Trends Section */}
             <div>
-                <h3 className="text-sm font-bold text-text-main mb-4 px-2">Tendências</h3>
+                <h3 className="text-sm font-bold text-text-main dark:text-white mb-4 px-2">Tendências</h3>
                 <div className="flex flex-col gap-4 px-2">
                     {trends.map((trend, index) => (
                         <div key={index} className="flex flex-col cursor-pointer group">

@@ -14,18 +14,18 @@ const SidebarRight = () => {
     ];
 
     return (
-        <aside className="hidden lg:flex flex-col w-[320px] fixed right-0 top-[60px] bottom-0 bg-background-main p-5 overflow-y-auto">
+        <aside className="hidden lg:flex flex-col w-[320px] fixed right-0 top-[60px] bottom-0 bg-background-main dark:bg-transparent p-5 overflow-y-auto transition-colors duration-300">
             {/* Suggestions Card */}
-            <div className="bg-white rounded-xl p-5 shadow-card mb-6">
-                <h3 className="text-text-main font-bold text-sm mb-4">Sugestões para seguir</h3>
+            <div className="bg-white dark:bg-cosmic-card dark:border dark:border-white/5 rounded-xl p-5 shadow-card mb-6 transition-colors duration-300">
+                <h3 className="text-text-main dark:text-white font-bold text-sm mb-4">Sugestões para seguir</h3>
                 <div className="flex flex-col gap-4">
                     {suggestions.map((user, index) => (
                         <div key={index} className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <img src={user.img} alt={user.name} className="w-[45px] h-[45px] rounded-full object-cover" />
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-text-main">{user.name}</span>
-                                    <span className="text-xs text-text-secondary max-w-[100px] truncate">{user.desc}</span>
+                                    <span className="text-sm font-bold text-text-main dark:text-white">{user.name}</span>
+                                    <span className="text-xs text-text-secondary dark:text-gray-400 max-w-[100px] truncate">{user.desc}</span>
                                 </div>
                             </div>
                             <button className="bg-primary text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-primary-dark transition-colors">
@@ -40,16 +40,16 @@ const SidebarRight = () => {
             </div>
 
             {/* Insights Card */}
-            <div className="bg-white rounded-xl p-5 shadow-card">
-                <h3 className="text-text-main font-bold text-sm mb-4">Insights de Sonhos</h3>
+            <div className="bg-white dark:bg-cosmic-card dark:border dark:border-white/5 rounded-xl p-5 shadow-card transition-colors duration-300">
+                <h3 className="text-text-main dark:text-white font-bold text-sm mb-4">Insights de Sonhos</h3>
                 <div className="flex flex-col gap-6">
                     {insights.map((item, index) => (
                         <div key={index} className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-text-main font-bold text-sm">
+                            <div className="flex items-center gap-2 text-text-main dark:text-white font-bold text-sm">
                                 <item.icon className="text-primary" />
                                 {item.title}
                             </div>
-                            <p className="text-xs text-text-secondary leading-relaxed">
+                            <p className="text-xs text-text-secondary dark:text-gray-400 leading-relaxed">
                                 {item.desc}
                             </p>
                         </div>
