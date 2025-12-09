@@ -1,0 +1,291 @@
+/* ========================================
+   Auth.css - Dark Dreamy Theme Styles
+   ======================================== */
+
+/* Background Gradient */
+.auth-bg {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Glassmorphism Card */
+.glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Typography */
+.auth-title {
+    color: #f8fafc;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.auth-subtitle {
+    color: #cbd5e1;
+    font-size: 0.95rem;
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+/* Inputs */
+.auth-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    padding: 14px 0;
+    color: #f8fafc;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+    margin-bottom: 24px;
+}
+
+.auth-input::placeholder {
+    color: #94a3b8;
+}
+
+.auth-input:focus {
+    outline: none;
+    border-bottom-color: #7c3aed;
+}
+
+/* Primary CTA Button */
+.btn-dream {
+    width: 100%;
+    padding: 14px 24px;
+    background: linear-gradient(90deg, #7c3aed 0%, #2563eb 100%);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+    margin-top: 8px;
+}
+
+.btn-dream:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+}
+
+.btn-dream:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Error Message */
+.auth-error {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 20px;
+    color: #fca5a5;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* Link Styling */
+.auth-link {
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 24px;
+}
+
+.auth-link a {
+    color: #a78bfa;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.auth-link a:hover {
+    color: #c4b5fd;
+    text-decoration: underline;
+}
+
+/* ========================================
+   Onboarding Specific Styles
+   ======================================== */
+
+.onboarding-container {
+    width: 100%;
+    max-width: 500px;
+}
+
+/* Progress Bar */
+.progress-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+
+.progress-step {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    transition: background 0.3s ease;
+}
+
+.progress-step.active {
+    background: linear-gradient(90deg, #7c3aed 0%, #2563eb 100%);
+}
+
+/* Avatar Upload */
+.avatar-upload {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin: 0 auto 24px;
+    transition: border-color 0.3s ease, background 0.3s ease;
+    overflow: hidden;
+}
+
+.avatar-upload:hover {
+    border-color: #7c3aed;
+    background: rgba(124, 58, 237, 0.1);
+}
+
+.avatar-upload img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-upload svg {
+    color: #cbd5e1;
+    font-size: 40px;
+}
+
+/* Privacy Selection Cards */
+.privacy-cards {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.privacy-card {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.privacy-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.privacy-card.selected {
+    border-color: #7c3aed;
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+    background: rgba(124, 58, 237, 0.1);
+}
+
+.privacy-card svg {
+    font-size: 32px;
+    margin-bottom: 12px;
+    color: #cbd5e1;
+}
+
+.privacy-card.selected svg {
+    color: #a78bfa;
+}
+
+.privacy-card h3 {
+    color: #f8fafc;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.privacy-card p {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+/* Textarea for Bio */
+.auth-textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 14px;
+    color: #f8fafc;
+    font-size: 1rem;
+    resize: none;
+    min-height: 100px;
+    margin-bottom: 24px;
+    transition: border-color 0.3s ease;
+}
+
+.auth-textarea::placeholder {
+    color: #94a3b8;
+}
+
+.auth-textarea:focus {
+    outline: none;
+    border-color: #7c3aed;
+}
+
+/* Navigation Buttons */
+.onboarding-nav {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-secondary {
+    flex: 1;
+    padding: 14px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    color: #f8fafc;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .glass-card {
+        padding: 28px 20px;
+    }
+
+    .privacy-cards {
+        flex-direction: column;
+    }
+}
