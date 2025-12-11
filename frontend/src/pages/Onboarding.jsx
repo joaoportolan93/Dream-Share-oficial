@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaUser, FaEye, FaLock } from 'react-icons/fa';
-import axios from 'axios';
+import { getProfile, updateUser, uploadAvatar } from '../services/api';
 import '../styles/Auth.css';
 
 const Onboarding = () => {
@@ -61,22 +61,20 @@ const Onboarding = () => {
         setError('');
 
         try {
-            const token = localStorage.getItem('access');
+            // Get current user profile to get user ID
+            const profileResponse = await getProfile();
+            const userId = profileResponse.data.id_usuario;
 
-            // Create FormData for file upload
-            const formData = new FormData();
-            formData.append('display_name', displayName);
-            formData.append('bio', bio);
-            formData.append('is_private', privacy === 'private');
+            // Upload avatar if selected
             if (avatar) {
-                formData.append('avatar', avatar);
+                await uploadAvatar(avatar);
             }
 
-            await axios.patch('http://127.0.0.1:8000/api/profile/update/', formData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data',
-                },
+            // Update profile data
+            await updateUser(userId, {
+                nome_completo: displayName,
+                bio: bio,
+                privacidade_padrao: privacy === 'private' ? 2 : 1,
             });
 
             // Redirect to home/feed

@@ -4,4 +4,71 @@ const api = axios.create({
     baseURL: 'http://127.0.0.1:8000',
 });
 
+// Add auth token to every request
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('access');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Handle token refresh on 401
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+                const refresh = localStorage.getItem('refresh');
+                if (refresh) {
+                    const response = await axios.post('http://127.0.0.1:8000/api/auth/refresh/', {
+                        refresh: refresh
+                    });
+                    localStorage.setItem('access', response.data.access);
+                    originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+                    return api(originalRequest);
+                }
+            } catch (refreshError) {
+                localStorage.removeItem('access');
+                localStorage.removeItem('refresh');
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+// Auth endpoints
+export const logout = async () => {
+    const refresh = localStorage.getItem('refresh');
+    try {
+        await api.post('/api/auth/logout/', { refresh });
+    } finally {
+        localStorage.removeItem('access');
+        localStorage.removeItem('refresh');
+    }
+};
+
+// Profile endpoints
+export const getProfile = () => api.get('/api/profile/');
+
+export const getUser = (userId) => api.get(`/api/users/${userId}/`);
+
+export const updateUser = (userId, data) => api.put(`/api/users/${userId}/`, data);
+
+export const uploadAvatar = (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return api.post('/api/users/avatar/', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+};
+
 export default api;
