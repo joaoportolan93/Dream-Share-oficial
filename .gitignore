@@ -6,8 +6,12 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 .env
 db.sqlite3
+
+# User uploaded media (don't commit!)
+backend/media/
 
 # Node
 node_modules/

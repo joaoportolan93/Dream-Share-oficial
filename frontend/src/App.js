@@ -12,6 +12,9 @@ import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import ExplorePage from './pages/ExplorePage';
 import Profile from './pages/Profile';
+import EditProfile from './pages/EditProfile';
+import Settings from './pages/Settings';
+import Notifications from './pages/Notifications';
 import Communities from './pages/Communities';
 import CommunityPage from './pages/CommunityPage';
 import Saved from './pages/Saved';
@@ -133,6 +136,36 @@ function App() {
                             <PrivateRoute>
                                 <Layout>
                                     <Saved />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/edit-profile"
+                        element={
+                            <PrivateRoute>
+                                <Layout>
+                                    <EditProfile />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/settings"
+                        element={
+                            <PrivateRoute>
+                                <Layout>
+                                    <Settings />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/notifications"
+                        element={
+                            <PrivateRoute>
+                                <Layout>
+                                    <Notifications />
                                 </Layout>
                             </PrivateRoute>
                         }
