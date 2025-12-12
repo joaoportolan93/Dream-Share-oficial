@@ -62,3 +62,39 @@ class LogoutSerializer(serializers.Serializer):
             RefreshToken(self.token).blacklist()
         except TokenError:
             self.fail('bad_token')
+
+
+# Dream (Publicacao) Serializers
+from .models import Publicacao
+
+class PublicacaoSerializer(serializers.ModelSerializer):
+    """Serializer for reading dream posts"""
+    usuario = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = Publicacao
+        fields = (
+            'id_publicacao', 'usuario', 'titulo', 'conteudo_texto',
+            'data_sonho', 'tipo_sonho', 'visibilidade', 'emocoes_sentidas', 'imagem',
+            'data_publicacao', 'editado', 'data_edicao', 'views_count'
+        )
+        read_only_fields = ('id_publicacao', 'usuario', 'data_publicacao', 'editado', 'data_edicao', 'views_count')
+
+
+class PublicacaoCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating dream posts"""
+    class Meta:
+        model = Publicacao
+        fields = (
+            'titulo', 'conteudo_texto', 'data_sonho', 'tipo_sonho',
+            'visibilidade', 'emocoes_sentidas', 'localizacao', 'imagem'
+        )
+        extra_kwargs = {
+            'titulo': {'required': False},
+            'data_sonho': {'required': False},
+            'tipo_sonho': {'required': False},
+            'visibilidade': {'required': False},
+            'emocoes_sentidas': {'required': False},
+            'localizacao': {'required': False},
+            'imagem': {'required': False},
+        }

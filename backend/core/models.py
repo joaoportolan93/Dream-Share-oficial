@@ -101,6 +101,7 @@ class Publicacao(models.Model):
     visibilidade = models.SmallIntegerField(choices=VISIBILIDADE_CHOICES, default=1)
     localizacao = models.CharField(max_length=100, null=True, blank=True)
     emocoes_sentidas = models.TextField(null=True, blank=True)
+    imagem = models.ImageField(upload_to='dream_images/', null=True, blank=True)
     views_count = models.IntegerField(default=0)
 
     class Meta:
