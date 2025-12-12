@@ -71,4 +71,15 @@ export const uploadAvatar = (file) => {
     });
 };
 
+// Dreams (Publicacao) endpoints
+export const getDreams = () => api.get('/api/dreams/');
+
+export const createDream = (data) => api.post('/api/dreams/', data);
+
+export const getDream = (id) => api.get(`/api/dreams/${id}/`);
+
+export const updateDream = (id, data) => api.put(`/api/dreams/${id}/`, data);
+
+export const deleteDream = (id) => api.delete(`/api/dreams/${id}/`);
+
 export default api;

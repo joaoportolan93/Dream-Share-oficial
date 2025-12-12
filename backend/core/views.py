@@ -5,6 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import models
 import os
 import uuid
 from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, LogoutSerializer
@@ -116,3 +117,53 @@ class AvatarUploadView(APIView):
             'message': 'Avatar atualizado com sucesso',
             'avatar_url': absolute_avatar_url
         }, status=status.HTTP_200_OK)
+
+
+# Dream (Publicacao) Views
+from rest_framework import viewsets
+from .models import Publicacao
+from .serializers import PublicacaoSerializer, PublicacaoCreateSerializer
+from django.utils import timezone
+
+class PublicacaoViewSet(viewsets.ModelViewSet):
+    """ViewSet for dream posts CRUD operations"""
+    permission_classes = (permissions.IsAuthenticated,)
+    
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return PublicacaoCreateSerializer
+        return PublicacaoSerializer
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+    def get_queryset(self):
+        # Return all public dreams + user's own private dreams
+        user = self.request.user
+        return Publicacao.objects.filter(
+            models.Q(visibilidade=1) | models.Q(usuario=user)
+        ).order_by('-data_publicacao')
+    
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+    
+    def perform_update(self, serializer):
+        serializer.save(editado=True, data_edicao=timezone.now())
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.usuario.id_usuario != request.user.id_usuario:
+            return Response(
+                {'error': 'Você só pode editar seus próprios sonhos'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.usuario.id_usuario != request.user.id_usuario:
+            return Response(
+                {'error': 'Você só pode excluir seus próprios sonhos'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().destroy(request, *args, **kwargs)
