@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import RegisterView, UserProfileView, UserDetailView, LogoutView, AvatarUploadView, PublicacaoViewSet
+from .views import RegisterView, UserProfileView, UserDetailView, LogoutView, AvatarUploadView, PublicacaoViewSet, FollowView, SuggestedUsersView
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -19,8 +19,12 @@ urlpatterns = [
     
     # User endpoints
     path('profile/', UserProfileView.as_view(), name='profile'),
+    path('users/suggested/', SuggestedUsersView.as_view(), name='suggested_users'),
     path('users/<int:pk>/', UserDetailView.as_view(), name='user_detail'),
     path('users/avatar/', AvatarUploadView.as_view(), name='avatar_upload'),
+    
+    # Follow endpoints
+    path('users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
     
     # Include router URLs (dreams CRUD)
     path('', include(router.urls)),

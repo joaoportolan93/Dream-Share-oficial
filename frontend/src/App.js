@@ -19,6 +19,7 @@ import Communities from './pages/Communities';
 import CommunityPage from './pages/CommunityPage';
 import Saved from './pages/Saved';
 import NotFound from './pages/NotFound';
+import UserProfile from './pages/UserProfile';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -106,6 +107,16 @@ function App() {
                             <PrivateRoute>
                                 <Layout>
                                     <Profile />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/user/:id"
+                        element={
+                            <PrivateRoute>
+                                <Layout>
+                                    <UserProfile />
                                 </Layout>
                             </PrivateRoute>
                         }

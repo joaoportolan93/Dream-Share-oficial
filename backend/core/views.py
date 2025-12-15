@@ -119,11 +119,34 @@ class AvatarUploadView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class SuggestedUsersView(APIView):
+    """Get suggested users to follow"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        from .models import Seguidor
+        
+        # Get IDs of users the current user already follows
+        following_ids = Seguidor.objects.filter(
+            usuario_seguidor=request.user, status=1
+        ).values_list('usuario_seguido_id', flat=True)
+        
+        # Get users that the current user doesn't follow yet (excluding self)
+        suggested = User.objects.exclude(
+            id_usuario__in=list(following_ids) + [request.user.id_usuario]
+        ).order_by('?')[:5]  # Random 5 users
+        
+        serializer = UserSerializer(suggested, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
 # Dream (Publicacao) Views
 from rest_framework import viewsets
-from .models import Publicacao
-from .serializers import PublicacaoSerializer, PublicacaoCreateSerializer
+from rest_framework.decorators import action
+from .models import Publicacao, Seguidor, ReacaoPublicacao, Comentario
+from .serializers import PublicacaoSerializer, PublicacaoCreateSerializer, SeguidorSerializer
 from django.utils import timezone
+from django.db.models import Count, Q
 
 class PublicacaoViewSet(viewsets.ModelViewSet):
     """ViewSet for dream posts CRUD operations"""
@@ -138,10 +161,25 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
         return {'request': self.request}
     
     def get_queryset(self):
-        # Return all public dreams + user's own private dreams
+        """Return dreams based on tab parameter: following or foryou"""
         user = self.request.user
+        tab = self.request.query_params.get('tab', 'following')
+        
+        if tab == 'foryou':
+            # For You: Public dreams ordered by engagement (likes + comments)
+            return Publicacao.objects.filter(
+                visibilidade=1
+            ).annotate(
+                engagement=Count('reacaopublicacao', distinct=True) + Count('comentario', distinct=True)
+            ).order_by('-engagement', '-data_publicacao')[:50]
+        
+        # Following: Dreams from people user follows + own dreams
+        following_ids = Seguidor.objects.filter(
+            usuario_seguidor=user, status=1
+        ).values_list('usuario_seguido_id', flat=True)
+        
         return Publicacao.objects.filter(
-            models.Q(visibilidade=1) | models.Q(usuario=user)
+            Q(usuario__in=following_ids) | Q(usuario=user)
         ).order_by('-data_publicacao')
     
     def perform_create(self, serializer):
@@ -167,3 +205,69 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().destroy(request, *args, **kwargs)
+
+
+class FollowView(APIView):
+    """Views for following/unfollowing users"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, pk):
+        """Follow a user"""
+        user_to_follow = get_object_or_404(User, pk=pk)
+        
+        # Can't follow yourself
+        if request.user.id_usuario == pk:
+            return Response(
+                {'error': 'Você não pode seguir a si mesmo'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if already following
+        existing = Seguidor.objects.filter(
+            usuario_seguidor=request.user,
+            usuario_seguido=user_to_follow
+        ).first()
+        
+        if existing:
+            if existing.status == 1:
+                return Response(
+                    {'error': 'Você já está seguindo este usuário'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # Reactivate if was blocked/inactive
+            existing.status = 1
+            existing.save()
+        else:
+            Seguidor.objects.create(
+                usuario_seguidor=request.user,
+                usuario_seguido=user_to_follow,
+                status=1
+            )
+        
+        return Response({
+            'message': f'Você agora está seguindo {user_to_follow.nome_usuario}',
+            'is_following': True
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        """Unfollow a user"""
+        user_to_unfollow = get_object_or_404(User, pk=pk)
+        
+        follow = Seguidor.objects.filter(
+            usuario_seguidor=request.user,
+            usuario_seguido=user_to_unfollow,
+            status=1
+        ).first()
+        
+        if not follow:
+            return Response(
+                {'error': 'Você não está seguindo este usuário'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        follow.delete()
+        
+        return Response({
+            'message': f'Você deixou de seguir {user_to_unfollow.nome_usuario}',
+            'is_following': False
+        }, status=status.HTTP_200_OK)

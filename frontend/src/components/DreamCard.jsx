@@ -52,7 +52,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <Link to={`/user/${dream.usuario?.nome_usuario}`}>
+                    <Link to={`/user/${dream.usuario?.id_usuario}`}>
                         <img
                             src={dream.usuario?.avatar_url || 'https://randomuser.me/api/portraits/lego/1.jpg'}
                             alt={dream.usuario?.nome_completo}
@@ -61,7 +61,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                     </Link>
                     <div>
                         <div className="flex items-center gap-2">
-                            <Link to={`/user/${dream.usuario?.nome_usuario}`} className="font-semibold text-white hover:text-primary transition-colors">
+                            <Link to={`/user/${dream.usuario?.id_usuario}`} className="font-semibold text-white hover:text-primary transition-colors">
                                 {dream.usuario?.nome_completo}
                             </Link>
                             {dream.visibilidade === 2 && (

@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { FaBell, FaHeart, FaComment, FaUserPlus, FaCheck, FaArrowLeft } from 'react-icons/fa';
-import { useNavigate, Link } from 'react-router-dom';
+import { FaBell, FaHeart, FaComment, FaUserPlus, FaCheck, FaArrowLeft, FaInfoCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const Notifications = () => {
     const navigate = useNavigate();
 
-    // Mock notifications data
+    // Mock notifications data - TO DO: Replace with real API data
     const [notifications, setNotifications] = useState([
         {
             id: 1,
             type: 'follower',
-            user: { name: 'Maria Silva', username: 'mariasilva', avatar: 'https://randomuser.me/api/portraits/women/32.jpg' },
+            user: { name: 'Maria Silva', avatar: 'https://randomuser.me/api/portraits/women/32.jpg' },
             message: 'começou a seguir você',
             time: '2 min atrás',
             read: false,
@@ -18,7 +18,7 @@ const Notifications = () => {
         {
             id: 2,
             type: 'like',
-            user: { name: 'João Pedro', username: 'joaopedro', avatar: 'https://randomuser.me/api/portraits/men/45.jpg' },
+            user: { name: 'João Pedro', avatar: 'https://randomuser.me/api/portraits/men/45.jpg' },
             message: 'curtiu seu sonho "Voando sobre montanhas"',
             time: '15 min atrás',
             read: false,
@@ -26,7 +26,7 @@ const Notifications = () => {
         {
             id: 3,
             type: 'comment',
-            user: { name: 'Ana Costa', username: 'anacosta', avatar: 'https://randomuser.me/api/portraits/women/68.jpg' },
+            user: { name: 'Ana Costa', avatar: 'https://randomuser.me/api/portraits/women/68.jpg' },
             message: 'comentou: "Que sonho incrível! Eu também já tive algo parecido..."',
             time: '1 hora atrás',
             read: true,
@@ -34,7 +34,7 @@ const Notifications = () => {
         {
             id: 4,
             type: 'follower',
-            user: { name: 'Carlos Mendes', username: 'carlosm', avatar: 'https://randomuser.me/api/portraits/men/22.jpg' },
+            user: { name: 'Carlos Mendes', avatar: 'https://randomuser.me/api/portraits/men/22.jpg' },
             message: 'começou a seguir você',
             time: '3 horas atrás',
             read: true,
@@ -42,7 +42,7 @@ const Notifications = () => {
         {
             id: 5,
             type: 'like',
-            user: { name: 'Beatriz Lima', username: 'bialima', avatar: 'https://randomuser.me/api/portraits/women/55.jpg' },
+            user: { name: 'Beatriz Lima', avatar: 'https://randomuser.me/api/portraits/women/55.jpg' },
             message: 'curtiu seu sonho "O labirinto misterioso"',
             time: '5 horas atrás',
             read: true,
@@ -101,6 +101,17 @@ const Notifications = () => {
                 )}
             </div>
 
+            {/* Demo Banner */}
+            <div className="bg-yellow-900/30 border border-yellow-600/30 rounded-lg p-4 mb-6 flex items-start gap-3">
+                <FaInfoCircle className="text-yellow-500 mt-0.5 flex-shrink-0" />
+                <div>
+                    <p className="text-yellow-200 text-sm font-medium">Dados de demonstração</p>
+                    <p className="text-yellow-200/70 text-xs mt-1">
+                        Estas notificações são exemplos. Em breve você receberá notificações reais quando alguém interagir com você!
+                    </p>
+                </div>
+            </div>
+
             {/* Notifications List */}
             <div className="space-y-2">
                 {notifications.length === 0 ? (
@@ -113,7 +124,7 @@ const Notifications = () => {
                     notifications.map(notification => (
                         <div
                             key={notification.id}
-                            className={`flex items-start gap-4 p-4 rounded-xl transition-colors cursor-pointer hover:bg-white/10 ${!notification.read ? 'bg-white/5 border-l-4 border-primary' : ''
+                            className={`flex items-start gap-4 p-4 rounded-xl transition-colors ${!notification.read ? 'bg-white/5 border-l-4 border-primary' : ''
                                 }`}
                         >
                             {/* User Avatar */}
@@ -131,12 +142,9 @@ const Notifications = () => {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                                 <p className="text-white">
-                                    <Link
-                                        to={`/user/${notification.user.username}`}
-                                        className="font-semibold hover:text-primary transition-colors"
-                                    >
+                                    <span className="font-semibold">
                                         {notification.user.name}
-                                    </Link>{' '}
+                                    </span>{' '}
                                     <span className="text-gray-300">{notification.message}</span>
                                 </p>
                                 <p className="text-sm text-gray-500 mt-1">{notification.time}</p>
