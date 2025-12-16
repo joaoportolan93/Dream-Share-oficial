@@ -97,11 +97,11 @@ const Profile = () => {
                                 <div className="text-sm opacity-90">Sonhos</div>
                             </div>
                             <div className="text-center md:text-left">
-                                <div className="text-xl font-bold">0</div>
+                                <div className="text-xl font-bold">{user?.seguidores_count || 0}</div>
                                 <div className="text-sm opacity-90">Seguidores</div>
                             </div>
                             <div className="text-center md:text-left">
-                                <div className="text-xl font-bold">0</div>
+                                <div className="text-xl font-bold">{user?.seguindo_count || 0}</div>
                                 <div className="text-sm opacity-90">Seguindo</div>
                             </div>
                         </div>

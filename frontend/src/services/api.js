@@ -71,4 +71,40 @@ export const uploadAvatar = (file) => {
     });
 };
 
+// Dreams (Publicacao) endpoints
+export const getDreams = (tab = 'following') => api.get(`/api/dreams/?tab=${tab}`);
+
+export const createDream = (data) => api.post('/api/dreams/', data);
+
+export const getDream = (id) => api.get(`/api/dreams/${id}/`);
+
+export const updateDream = (id, data) => api.put(`/api/dreams/${id}/`, data);
+
+export const deleteDream = (id) => api.delete(`/api/dreams/${id}/`);
+
+export const likeDream = (id) => api.post(`/api/dreams/${id}/like/`);
+
+// Follow endpoints
+export const followUser = (userId) => api.post(`/api/users/${userId}/follow/`);
+
+export const unfollowUser = (userId) => api.delete(`/api/users/${userId}/follow/`);
+
+export const getSuggestedUsers = () => api.get('/api/users/suggested/');
+
+// Comments endpoints
+export const getComments = (dreamId) => api.get(`/api/dreams/${dreamId}/comments/`);
+
+export const createComment = (dreamId, text) => api.post(`/api/dreams/${dreamId}/comments/`, { conteudo_texto: text });
+
+export const deleteComment = (dreamId, commentId) => api.delete(`/api/dreams/${dreamId}/comments/${commentId}/`);
+
+// Notifications endpoints
+export const getNotifications = () => api.get('/api/notifications/');
+
+export const markNotificationRead = (id) => api.patch(`/api/notifications/${id}/read/`);
+
+export const markAllNotificationsRead = () => api.patch('/api/notifications/read_all/');
+
 export default api;
+
+
