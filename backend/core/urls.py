@@ -4,11 +4,16 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import RegisterView, UserProfileView, UserDetailView, LogoutView, AvatarUploadView, PublicacaoViewSet, FollowView, SuggestedUsersView
+from .views import RegisterView, UserProfileView, UserDetailView, LogoutView, AvatarUploadView, PublicacaoViewSet, FollowView, SuggestedUsersView, ComentarioViewSet, NotificacaoViewSet
 
 # Router for ViewSets
 router = DefaultRouter()
 router.register(r'dreams', PublicacaoViewSet, basename='dreams')
+router.register(r'notifications', NotificacaoViewSet, basename='notifications')
+
+# Nested router for comments
+comments_list = ComentarioViewSet.as_view({'get': 'list', 'post': 'create'})
+comments_detail = ComentarioViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'})
 
 urlpatterns = [
     # Auth endpoints
@@ -26,6 +31,12 @@ urlpatterns = [
     # Follow endpoints
     path('users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
     
-    # Include router URLs (dreams CRUD)
+    # Comments endpoints (nested under dreams)
+    path('dreams/<int:dream_pk>/comments/', comments_list, name='dream-comments-list'),
+    path('dreams/<int:dream_pk>/comments/<int:pk>/', comments_detail, name='dream-comments-detail'),
+    
+    # Include router URLs (dreams CRUD + notifications)
     path('', include(router.urls)),
 ]
+
+

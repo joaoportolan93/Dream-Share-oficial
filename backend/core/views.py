@@ -206,6 +206,41 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
             )
         return super().destroy(request, *args, **kwargs)
 
+    @action(detail=True, methods=['post'])
+    def like(self, request, pk=None):
+        """Toggle like on a dream post"""
+        dream = self.get_object()
+        existing_like = ReacaoPublicacao.objects.filter(
+            publicacao=dream,
+            usuario=request.user
+        ).first()
+
+        if existing_like:
+            existing_like.delete()
+            is_liked = False
+        else:
+            ReacaoPublicacao.objects.create(
+                publicacao=dream,
+                usuario=request.user
+            )
+            is_liked = True
+            # Create notification for like (tipo 3 = Curtida)
+            from .views import create_notification
+            create_notification(
+                usuario_destino=dream.usuario,
+                usuario_origem=request.user,
+                tipo=3,
+                id_referencia=dream.id_publicacao,
+                conteudo=dream.titulo or dream.conteudo_texto[:50]
+            )
+
+        likes_count = ReacaoPublicacao.objects.filter(publicacao=dream).count()
+
+        return Response({
+            'is_liked': is_liked,
+            'likes_count': likes_count
+        }, status=status.HTTP_200_OK)
+
 
 class FollowView(APIView):
     """Views for following/unfollowing users"""
@@ -244,6 +279,14 @@ class FollowView(APIView):
                 status=1
             )
         
+        # Create notification for new follower (tipo 4 = Seguidor Novo)
+        from .views import create_notification
+        create_notification(
+            usuario_destino=user_to_follow,
+            usuario_origem=request.user,
+            tipo=4
+        )
+        
         return Response({
             'message': f'Você agora está seguindo {user_to_follow.nome_usuario}',
             'is_following': True
@@ -271,3 +314,111 @@ class FollowView(APIView):
             'message': f'Você deixou de seguir {user_to_unfollow.nome_usuario}',
             'is_following': False
         }, status=status.HTTP_200_OK)
+
+
+# Comments ViewSet
+from .serializers import ComentarioSerializer, ComentarioCreateSerializer
+
+class ComentarioViewSet(viewsets.ModelViewSet):
+    """ViewSet for comments on dream posts"""
+    permission_classes = (permissions.IsAuthenticated,)
+    
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ComentarioCreateSerializer
+        return ComentarioSerializer
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
+    
+    def get_queryset(self):
+        """Return comments for a specific dream"""
+        dream_id = self.kwargs.get('dream_pk')
+        if dream_id:
+            return Comentario.objects.filter(
+                publicacao_id=dream_id,
+                status=1
+            ).order_by('-data_comentario')
+        return Comentario.objects.none()
+    
+    def perform_create(self, serializer):
+        dream_id = self.kwargs.get('dream_pk')
+        dream = get_object_or_404(Publicacao, pk=dream_id)
+        comment = serializer.save(usuario=self.request.user, publicacao=dream)
+        
+        # Create notification for comment (tipo 2 = Comentário)
+        create_notification(
+            usuario_destino=dream.usuario,
+            usuario_origem=self.request.user,
+            tipo=2,
+            id_referencia=dream.id_publicacao,
+            conteudo=comment.conteudo_texto[:100]
+        )
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.usuario.id_usuario != request.user.id_usuario:
+            return Response(
+                {'error': 'Você só pode editar seus próprios comentários'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.usuario.id_usuario != request.user.id_usuario:
+            return Response(
+                {'error': 'Você só pode excluir seus próprios comentários'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().destroy(request, *args, **kwargs)
+
+
+# Notifications ViewSet
+from .models import Notificacao
+from .serializers import NotificacaoSerializer
+
+class NotificacaoViewSet(viewsets.ModelViewSet):
+    """ViewSet for user notifications"""
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = NotificacaoSerializer
+    http_method_names = ['get', 'patch']
+    
+    def get_queryset(self):
+        """Return notifications for the current user"""
+        return Notificacao.objects.filter(
+            usuario_destino=self.request.user
+        ).order_by('-data_criacao')[:50]
+    
+    @action(detail=True, methods=['patch'])
+    def read(self, request, pk=None):
+        """Mark a notification as read"""
+        notification = self.get_object()
+        notification.lida = True
+        notification.data_leitura = timezone.now()
+        notification.save()
+        return Response({'lida': True}, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['patch'])
+    def read_all(self, request):
+        """Mark all notifications as read"""
+        updated = Notificacao.objects.filter(
+            usuario_destino=request.user,
+            lida=False
+        ).update(lida=True, data_leitura=timezone.now())
+        return Response({'marked_read': updated}, status=status.HTTP_200_OK)
+
+
+# Helper function to create notifications
+def create_notification(usuario_destino, usuario_origem, tipo, id_referencia=None, conteudo=None):
+    """Create a notification if destino != origem"""
+    if usuario_destino.id_usuario != usuario_origem.id_usuario:
+        Notificacao.objects.create(
+            usuario_destino=usuario_destino,
+            usuario_origem=usuario_origem,
+            tipo_notificacao=tipo,
+            id_referencia=id_referencia,
+            conteudo=conteudo
+        )
+
+

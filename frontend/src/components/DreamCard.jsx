@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends } from 'react-icons/fa';
-import { deleteDream } from '../services/api';
+import { deleteDream, likeDream } from '../services/api';
+import { AnimatePresence } from 'framer-motion';
+import CommentSection from './CommentSection';
 
 const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
-    const [liked, setLiked] = useState(false);
+    const [liked, setLiked] = useState(dream.is_liked || false);
+    const [likesCount, setLikesCount] = useState(dream.likes_count || 0);
     const [showMenu, setShowMenu] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [liking, setLiking] = useState(false);
+    const [showComments, setShowComments] = useState(false);
+    const [commentsCount, setCommentsCount] = useState(dream.comentarios_count || 0);
 
     const isOwner = dream.usuario?.id_usuario === currentUserId;
 
@@ -24,6 +30,31 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
         if (diffHours < 24) return `${diffHours}h`;
         if (diffDays < 7) return `${diffDays}d`;
         return date.toLocaleDateString('pt-BR');
+    };
+
+    const handleLike = async () => {
+        if (liking) return;
+
+        // Optimistic UI update
+        const wasLiked = liked;
+        const prevCount = likesCount;
+        setLiked(!wasLiked);
+        setLikesCount(wasLiked ? prevCount - 1 : prevCount + 1);
+        setLiking(true);
+
+        try {
+            const response = await likeDream(dream.id_publicacao);
+            // Sync with server response
+            setLiked(response.data.is_liked);
+            setLikesCount(response.data.likes_count);
+        } catch (err) {
+            // Revert on error
+            console.error('Error toggling like:', err);
+            setLiked(wasLiked);
+            setLikesCount(prevCount);
+        } finally {
+            setLiking(false);
+        }
     };
 
     const handleDelete = async () => {
@@ -145,20 +176,34 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
             {/* Actions */}
             <div className="flex items-center gap-6 pt-4 border-t border-white/10">
                 <button
-                    onClick={() => setLiked(!liked)}
-                    className="flex items-center gap-2 text-gray-400 hover:text-red-400 transition-colors"
+                    onClick={handleLike}
+                    disabled={liking}
+                    className={`flex items-center gap-2 transition-colors ${liked ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}`}
                 >
                     {liked ? <FaHeart className="text-red-400" /> : <FaRegHeart />}
-                    <span className="text-sm">0</span>
+                    <span className="text-sm">{likesCount}</span>
                 </button>
-                <button className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors">
+                <button
+                    onClick={() => setShowComments(!showComments)}
+                    className={`flex items-center gap-2 transition-colors ${showComments ? 'text-primary' : 'text-gray-400 hover:text-primary'}`}
+                >
                     <FaComment />
-                    <span className="text-sm">0</span>
+                    <span className="text-sm">{commentsCount}</span>
                 </button>
                 <button className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors">
                     <FaShare />
                 </button>
             </div>
+
+            {/* Comments Section */}
+            <AnimatePresence>
+                {showComments && (
+                    <CommentSection
+                        dreamId={dream.id_publicacao}
+                        currentUserId={currentUserId}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

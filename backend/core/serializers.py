@@ -158,3 +158,45 @@ class SeguidorSerializer(serializers.ModelSerializer):
         model = Seguidor
         fields = ('id_seguidor', 'usuario_seguidor', 'usuario_seguido', 'data_seguimento', 'status')
         read_only_fields = ('id_seguidor', 'data_seguimento', 'status')
+
+
+# Comentario Serializers
+from .models import Comentario
+
+class ComentarioSerializer(serializers.ModelSerializer):
+    """Serializer for reading comments"""
+    usuario = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = Comentario
+        fields = ('id_comentario', 'usuario', 'conteudo_texto', 'data_comentario', 'editado')
+        read_only_fields = ('id_comentario', 'usuario', 'data_comentario', 'editado')
+
+
+class ComentarioCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating comments"""
+    class Meta:
+        model = Comentario
+        fields = ('conteudo_texto',)
+
+
+# Notificacao Serializers
+from .models import Notificacao
+
+class NotificacaoSerializer(serializers.ModelSerializer):
+    """Serializer for reading notifications"""
+    usuario_origem = UserSerializer(read_only=True)
+    tipo_notificacao_display = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notificacao
+        fields = ('id_notificacao', 'usuario_origem', 'tipo_notificacao', 'tipo_notificacao_display', 
+                  'id_referencia', 'conteudo', 'lida', 'data_criacao')
+        read_only_fields = ('id_notificacao', 'usuario_origem', 'tipo_notificacao', 'id_referencia', 
+                           'conteudo', 'data_criacao')
+
+    def get_tipo_notificacao_display(self, obj):
+        tipos = {1: 'post', 2: 'comment', 3: 'like', 4: 'follower'}
+        return tipos.get(obj.tipo_notificacao, 'other')
+
+
