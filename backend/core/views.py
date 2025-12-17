@@ -9,12 +9,22 @@ from django.db import models
 import os
 import uuid
 from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, LogoutSerializer
+from .throttles import RegisterRateThrottle, LoginRateThrottle
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 User = get_user_model()
 
 class RegisterView(generics.CreateAPIView):
+    """Register a new user with rate limiting"""
     serializer_class = RegisterSerializer
     permission_classes = (permissions.AllowAny,)
+    throttle_classes = [RegisterRateThrottle]
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """Custom login view with rate limiting to prevent brute force attacks"""
+    throttle_classes = [LoginRateThrottle]
+
 
 class UserProfileView(APIView):
     """Get current authenticated user's profile"""
@@ -161,14 +171,21 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
         return {'request': self.request}
     
     def get_queryset(self):
-        """Return dreams based on tab parameter: following or foryou"""
+        """Return dreams based on action and tab parameter"""
         user = self.request.user
+        
+        # For single object actions, return all accessible posts
+        # (permission checks happen in update/destroy methods)
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'like']:
+            return Publicacao.objects.all()
+        
+        # For list actions, filter by tab
         tab = self.request.query_params.get('tab', 'following')
         
         if tab == 'foryou':
             # For You: Public dreams ordered by engagement (likes + comments)
             return Publicacao.objects.filter(
-                visibilidade=1
+                visibilidade=1  # Only public posts in For You
             ).annotate(
                 engagement=Count('reacaopublicacao', distinct=True) + Count('comentario', distinct=True)
             ).order_by('-engagement', '-data_publicacao')[:50]
@@ -178,12 +195,21 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
             usuario_seguidor=user, status=1
         ).values_list('usuario_seguido_id', flat=True)
         
+        # Include:
+        # - Public posts (visibility=1) from followed users
+        # - Friends-only posts (visibility=2) from followed users
+        # - All own posts (any visibility)
         return Publicacao.objects.filter(
-            Q(usuario__in=following_ids) | Q(usuario=user)
+            (Q(usuario__in=following_ids) & Q(visibilidade__in=[1, 2])) | Q(usuario=user)
         ).order_by('-data_publicacao')
+
     
     def perform_create(self, serializer):
-        serializer.save(usuario=self.request.user)
+        publicacao = serializer.save(usuario=self.request.user)
+        # Extract and save hashtags from the post content
+        from .views import extract_and_save_hashtags
+        extract_and_save_hashtags(publicacao)
+
     
     def perform_update(self, serializer):
         serializer.save(editado=True, data_edicao=timezone.now())
@@ -386,9 +412,15 @@ class NotificacaoViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Return notifications for the current user"""
-        return Notificacao.objects.filter(
+        queryset = Notificacao.objects.filter(
             usuario_destino=self.request.user
-        ).order_by('-data_criacao')[:50]
+        ).order_by('-data_criacao')
+        
+        # Only limit for list action, not for detail actions
+        if self.action == 'list':
+            return queryset[:50]
+        return queryset
+
     
     @action(detail=True, methods=['patch'])
     def read(self, request, pk=None):
@@ -421,4 +453,94 @@ def create_notification(usuario_destino, usuario_origem, tipo, id_referencia=Non
             conteudo=conteudo
         )
 
+
+# Search View
+import re
+from .models import Hashtag, PublicacaoHashtag
+from .serializers import HashtagSerializer, SearchResultSerializer
+
+class SearchView(APIView):
+    """Search across posts, users, and hashtags"""
+    permission_classes = (permissions.IsAuthenticated,)
+    
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        search_type = request.query_params.get('type', 'all')
+        limit = int(request.query_params.get('limit', 20))
+        
+        if not query:
+            return Response(
+                {'error': 'Parâmetro de busca "q" é obrigatório'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        posts = []
+        users = []
+        hashtags = []
+        
+        # Search posts
+        if search_type in ['all', 'posts']:
+            posts = list(Publicacao.objects.filter(
+                Q(conteudo_texto__icontains=query) | Q(titulo__icontains=query),
+                visibilidade=1  # Only public posts
+            ).annotate(
+                engagement=Count('reacaopublicacao', distinct=True) + Count('comentario', distinct=True)
+            ).order_by('-engagement', '-data_publicacao')[:limit])
+        
+        # Search users
+        if search_type in ['all', 'users']:
+            users = list(User.objects.filter(
+                Q(nome_usuario__icontains=query) | Q(nome_completo__icontains=query),
+                status=1  # Only active users
+            ).order_by('nome_usuario')[:limit])
+        
+        # Search hashtags
+        if search_type in ['all', 'hashtags']:
+            # Remove # from query if present
+            hashtag_query = query.lstrip('#')
+            hashtags = list(Hashtag.objects.filter(
+                texto_hashtag__istartswith=hashtag_query
+            ).order_by('-contagem_uso')[:limit])
+        
+        serializer = SearchResultSerializer(
+            instance={},
+            posts=posts,
+            users=users,
+            hashtags=hashtags,
+            context={'request': request}
+        )
+        
+        return Response(serializer.data)
+
+
+# Helper function to extract and save hashtags from post content
+def extract_and_save_hashtags(publicacao):
+    """Extract hashtags from post content and create relationships"""
+    hashtag_pattern = r'#(\w+)'
+    matches = re.findall(hashtag_pattern, publicacao.conteudo_texto or '')
+    
+    for tag_text in matches:
+        tag_text = tag_text.lower()[:50]  # Normalize and limit length
+        
+        # Get or create hashtag
+        hashtag, created = Hashtag.objects.get_or_create(
+            texto_hashtag=tag_text,
+            defaults={
+                'contagem_uso': 0,
+                'primeira_utilizacao': timezone.now(),
+                'ultima_utilizacao': timezone.now()
+            }
+        )
+        
+        # Create relationship if not exists
+        relation, rel_created = PublicacaoHashtag.objects.get_or_create(
+            publicacao=publicacao,
+            hashtag=hashtag
+        )
+        
+        # Update hashtag stats if new relation
+        if rel_created:
+            hashtag.contagem_uso += 1
+            hashtag.ultima_utilizacao = timezone.now()
+            hashtag.save()
 
