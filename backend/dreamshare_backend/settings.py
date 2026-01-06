@@ -156,22 +156,8 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
-    ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/minute',
-        'user': '100/minute',
-        'login': '5/minute',
-        'register': '3/minute',
-        'burst': '60/minute',
-        'sustained': '1000/day',
-    }
 }
 
-
-# DRF Spectacular (API Documentation) Settings
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Dream Share API',
     'DESCRIPTION': 'API para a rede social de compartilhamento de sonhos',

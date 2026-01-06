@@ -7,8 +7,22 @@ import { logout, getProfile } from '../services/api';
 const Header = () => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [user, setUser] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
+
+    const handleSearch = () => {
+        if (searchQuery.trim()) {
+            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+            setSearchQuery(''); // clear after search or keep it? usually better to keep but let's clear for now or simple nav
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    };
 
     // Fetch user profile on mount
     useEffect(() => {
@@ -62,10 +76,18 @@ const Header = () => {
                 <div className="relative w-full">
                     <input
                         type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
                         placeholder="Busque sonhos, pessoas, hashtags..."
                         className="w-full h-[40px] bg-background-input dark:bg-white/10 dark:text-white dark:placeholder-gray-400 rounded-full pl-5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
-                    <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary dark:text-gray-400 text-sm" />
+                    <button
+                        onClick={handleSearch}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary dark:text-gray-400 text-sm hover:text-primary transition-colors"
+                    >
+                        <FaSearch />
+                    </button>
                 </div>
             </div>
 

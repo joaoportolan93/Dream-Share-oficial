@@ -105,6 +105,8 @@ export const markNotificationRead = (id) => api.patch(`/api/notifications/${id}/
 
 export const markAllNotificationsRead = () => api.patch('/api/notifications/read_all/');
 
+export const search = (query, type = 'all', limit = 20) => api.get(`/api/search/?q=${query}&type=${type}&limit=${limit}`);
+
 export default api;
 
 

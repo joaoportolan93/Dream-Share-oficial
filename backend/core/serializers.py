@@ -200,7 +200,7 @@ class NotificacaoSerializer(serializers.ModelSerializer):
         return tipos.get(obj.tipo_notificacao, 'other')
 
 
-# Hashtag Serializers
+# Hashtag Serializer
 from .models import Hashtag
 
 class HashtagSerializer(serializers.ModelSerializer):
@@ -208,32 +208,12 @@ class HashtagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hashtag
         fields = ('id_hashtag', 'texto_hashtag', 'contagem_uso')
-        read_only_fields = ('id_hashtag', 'contagem_uso')
 
 
-class SearchResultSerializer(serializers.Serializer):
-    """Serializer for unified search results"""
-    results = serializers.SerializerMethodField()
-    counts = serializers.SerializerMethodField()
-    
-    def __init__(self, *args, posts=None, users=None, hashtags=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.posts = posts or []
-        self.users = users or []
-        self.hashtags = hashtags or []
-    
-    def get_results(self, obj):
-        request = self.context.get('request')
-        return {
-            'posts': PublicacaoSerializer(self.posts, many=True, context={'request': request}).data,
-            'users': UserSerializer(self.users, many=True, context={'request': request}).data,
-            'hashtags': HashtagSerializer(self.hashtags, many=True).data
-        }
-    
-    def get_counts(self, obj):
-        return {
-            'posts': len(self.posts),
-            'users': len(self.users),
-            'hashtags': len(self.hashtags)
-        }
+class SearchSerializer(serializers.Serializer):
+    """Serializer for search results"""
+    results = serializers.DictField()
+    counts = serializers.DictField()
+
+
 
