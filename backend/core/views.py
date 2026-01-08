@@ -12,6 +12,52 @@ from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerialize
 
 User = get_user_model()
 
+class SearchView(APIView):
+    """Unified search endpoint for posts, users, and hashtags"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        search_type = request.query_params.get('type', 'all')
+        limit = int(request.query_params.get('limit', 20))
+
+        if not query:
+            return Response({'results': {}, 'counts': {}}, status=status.HTTP_200_OK)
+
+        results = {}
+        counts = {}
+
+        # Search Posts
+        if search_type in ['all', 'posts']:
+            posts = Publicacao.objects.filter(
+                models.Q(conteudo_texto__icontains=query) | models.Q(titulo__icontains=query),
+                visibilidade=1  # Only public posts
+            ).annotate(
+                engagement=Count('reacaopublicacao', distinct=True) + Count('comentario', distinct=True)
+            ).order_by('-engagement')[:limit]
+            results['posts'] = PublicacaoSerializer(posts, many=True, context={'request': request}).data
+            counts['posts'] = len(results['posts'])
+
+        # Search Users
+        if search_type in ['all', 'users']:
+            users = User.objects.filter(
+                models.Q(nome_usuario__icontains=query) | models.Q(nome_completo__icontains=query)
+            ).exclude(id_usuario=request.user.id_usuario)[:limit]
+            results['users'] = UserSerializer(users, many=True, context={'request': request}).data
+            counts['users'] = len(results['users'])
+
+        # Search Hashtags
+        if search_type in ['all', 'hashtags']:
+            hashtags = Hashtag.objects.filter(
+                texto_hashtag__istartswith=query.lstrip('#')
+            ).order_by('-contagem_uso')[:limit]
+            results['hashtags'] = HashtagSerializer(hashtags, many=True).data
+            counts['hashtags'] = len(results['hashtags'])
+
+        serializer = SearchSerializer(data={'results': results, 'counts': counts})
+        serializer.is_valid()
+        return Response(serializer.data)
+
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = (permissions.AllowAny,)
@@ -143,8 +189,8 @@ class SuggestedUsersView(APIView):
 # Dream (Publicacao) Views
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from .models import Publicacao, Seguidor, ReacaoPublicacao, Comentario
-from .serializers import PublicacaoSerializer, PublicacaoCreateSerializer, SeguidorSerializer
+from .models import Publicacao, Seguidor, ReacaoPublicacao, Comentario, Hashtag, PublicacaoHashtag
+from .serializers import PublicacaoSerializer, PublicacaoCreateSerializer, SeguidorSerializer, HashtagSerializer, SearchSerializer
 from django.utils import timezone
 from django.db.models import Count, Q
 
@@ -163,27 +209,54 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Return dreams based on tab parameter: following or foryou"""
         user = self.request.user
-        tab = self.request.query_params.get('tab', 'following')
         
-        if tab == 'foryou':
-            # For You: Public dreams ordered by engagement (likes + comments)
-            return Publicacao.objects.filter(
-                visibilidade=1
-            ).annotate(
-                engagement=Count('reacaopublicacao', distinct=True) + Count('comentario', distinct=True)
-            ).order_by('-engagement', '-data_publicacao')[:50]
-        
-        # Following: Dreams from people user follows + own dreams
+        # Helper to get following IDs
         following_ids = Seguidor.objects.filter(
             usuario_seguidor=user, status=1
         ).values_list('usuario_seguido_id', flat=True)
-        
+
+        if self.action == 'list':
+            tab = self.request.query_params.get('tab', 'following')
+            
+            if tab == 'foryou':
+                # For You: Public dreams ordered by engagement (likes + comments)
+                return Publicacao.objects.filter(
+                    visibilidade=1
+                ).annotate(
+                    engagement=Count('reacaopublicacao', distinct=True) + Count('comentario', distinct=True)
+                ).order_by('-engagement', '-data_publicacao')[:50]
+            
+            # Following: Dreams from people user follows + own dreams
+            return Publicacao.objects.filter(
+                Q(usuario__in=following_ids) | Q(usuario=user)
+            ).order_by('-data_publicacao')
+
+        # For detailed actions (retrieve, like, etc), return all accessible posts
+        # Accessible = Public OR Own OR Followed
         return Publicacao.objects.filter(
-            Q(usuario__in=following_ids) | Q(usuario=user)
-        ).order_by('-data_publicacao')
+            Q(visibilidade=1) | 
+            Q(usuario=user) | 
+            Q(usuario__in=following_ids)
+        ).distinct()
     
     def perform_create(self, serializer):
-        serializer.save(usuario=self.request.user)
+        post = serializer.save(usuario=self.request.user)
+        
+        # Extract hashtags
+        import re
+        hashtags = re.findall(r'#(\w+)', post.conteudo_texto)
+        
+        for tag_text in set(hashtags):
+            hashtag, created = Hashtag.objects.get_or_create(texto_hashtag=tag_text)
+            if not created:
+                hashtag.contagem_uso += 1
+                hashtag.ultima_utilizacao = timezone.now()
+                hashtag.save()
+            
+            PublicacaoHashtag.objects.create(
+                publicacao=post,
+                hashtag=hashtag
+            )
     
     def perform_update(self, serializer):
         serializer.save(editado=True, data_edicao=timezone.now())

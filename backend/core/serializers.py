@@ -200,3 +200,20 @@ class NotificacaoSerializer(serializers.ModelSerializer):
         return tipos.get(obj.tipo_notificacao, 'other')
 
 
+# Hashtag Serializer
+from .models import Hashtag
+
+class HashtagSerializer(serializers.ModelSerializer):
+    """Serializer for hashtags"""
+    class Meta:
+        model = Hashtag
+        fields = ('id_hashtag', 'texto_hashtag', 'contagem_uso')
+
+
+class SearchSerializer(serializers.Serializer):
+    """Serializer for search results"""
+    results = serializers.DictField()
+    counts = serializers.DictField()
+
+
+

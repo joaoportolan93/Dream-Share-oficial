@@ -20,6 +20,7 @@ import CommunityPage from './pages/CommunityPage';
 import Saved from './pages/Saved';
 import NotFound from './pages/NotFound';
 import UserProfile from './pages/UserProfile';
+import SearchPage from './pages/SearchPage';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
@@ -97,6 +98,16 @@ function App() {
                             <PrivateRoute>
                                 <Layout hideRightSidebar>
                                     <ExplorePage />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/search"
+                        element={
+                            <PrivateRoute>
+                                <Layout hideRightSidebar>
+                                    <SearchPage />
                                 </Layout>
                             </PrivateRoute>
                         }
