@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
-import { FaCog, FaBell, FaLock, FaPalette, FaUser, FaSave, FaArrowLeft } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaCog, FaBell, FaLock, FaPalette, FaUser, FaSave, FaArrowLeft, FaShieldAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { getProfile } from '../services/api';
 
 const Settings = () => {
     const navigate = useNavigate();
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState('');
+    const [currentUser, setCurrentUser] = useState(null);
+
+    // Fetch current user profile
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const response = await getProfile();
+                setCurrentUser(response.data);
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+            }
+        };
+        fetchUser();
+    }, []);
 
     // Settings state
     const [settings, setSettings] = useState({
@@ -169,6 +184,26 @@ const Settings = () => {
                     </select>
                 </SettingRow>
             </div>
+
+            {/* Admin Section - Only visible for admins */}
+            {currentUser?.is_admin && (
+                <div className="bg-amber-500/10 border border-amber-500/30 backdrop-blur-sm rounded-2xl p-6 mb-6">
+                    <h2 className="text-lg font-semibold text-amber-500 mb-4 flex items-center gap-2">
+                        <FaShieldAlt />
+                        Administração do Sistema
+                    </h2>
+                    <p className="text-gray-400 mb-4">
+                        Você tem privilégios de administrador. Acesse o painel para gerenciar usuários, moderação e estatísticas.
+                    </p>
+                    <button
+                        onClick={() => navigate('/admin')}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-black font-bold rounded-xl hover:opacity-90 transition-all"
+                    >
+                        <FaShieldAlt />
+                        Acessar Painel Admin
+                    </button>
+                </div>
+            )}
 
             {/* Save Button */}
             <button

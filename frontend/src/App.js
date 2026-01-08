@@ -22,6 +22,12 @@ import NotFound from './pages/NotFound';
 import UserProfile from './pages/UserProfile';
 import SearchPage from './pages/SearchPage';
 
+// Admin - Issue #29
+import AdminLayout from './layouts/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ModerationQueue from './pages/admin/ModerationQueue';
+import UserManagement from './pages/admin/UserManagement';
+
 // Components
 import PrivateRoute from './components/PrivateRoute';
 
@@ -189,6 +195,38 @@ function App() {
                                 <Layout>
                                     <Notifications />
                                 </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+
+                    {/* Admin Routes - Issue #29 */}
+                    <Route
+                        path="/admin"
+                        element={
+                            <PrivateRoute>
+                                <AdminLayout>
+                                    <AdminDashboard />
+                                </AdminLayout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/moderation"
+                        element={
+                            <PrivateRoute>
+                                <AdminLayout>
+                                    <ModerationQueue />
+                                </AdminLayout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/users"
+                        element={
+                            <PrivateRoute>
+                                <AdminLayout>
+                                    <UserManagement />
+                                </AdminLayout>
                             </PrivateRoute>
                         }
                     />

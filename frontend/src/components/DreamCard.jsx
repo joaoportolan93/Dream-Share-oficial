@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag } from 'react-icons/fa';
 import { deleteDream, likeDream } from '../services/api';
 import { AnimatePresence } from 'framer-motion';
 import CommentSection from './CommentSection';
+import ReportModal from './ReportModal';
 
 const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
     const [liked, setLiked] = useState(dream.is_liked || false);
@@ -13,6 +14,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
     const [liking, setLiking] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [commentsCount, setCommentsCount] = useState(dream.comentarios_count || 0);
+    const [showReportModal, setShowReportModal] = useState(false);
 
     const isOwner = dream.usuario?.id_usuario === currentUserId;
 
@@ -108,33 +110,43 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                 </div>
 
                 {/* Menu */}
-                {isOwner && (
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowMenu(!showMenu)}
-                            className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                        >
-                            <FaEllipsisH className="text-gray-400" />
-                        </button>
-                        {showMenu && (
-                            <div className="absolute right-0 top-10 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-10 min-w-[150px]">
+                <div className="relative">
+                    <button
+                        onClick={() => setShowMenu(!showMenu)}
+                        className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                    >
+                        <FaEllipsisH className="text-gray-400" />
+                    </button>
+                    {showMenu && (
+                        <div className="absolute right-0 top-10 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-10 min-w-[150px]">
+                            {isOwner && (
+                                <>
+                                    <button
+                                        onClick={() => { onEdit?.(dream); setShowMenu(false); }}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-white/10 transition-colors"
+                                    >
+                                        <FaEdit /> Editar
+                                    </button>
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={deleting}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-red-400 hover:bg-white/10 transition-colors"
+                                    >
+                                        <FaTrash /> {deleting ? 'Excluindo...' : 'Excluir'}
+                                    </button>
+                                </>
+                            )}
+                            {!isOwner && (
                                 <button
-                                    onClick={() => { onEdit?.(dream); setShowMenu(false); }}
-                                    className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-white/10 transition-colors"
+                                    onClick={() => { setShowReportModal(true); setShowMenu(false); }}
+                                    className="w-full flex items-center gap-2 px-4 py-3 text-orange-400 hover:bg-white/10 transition-colors"
                                 >
-                                    <FaEdit /> Editar
+                                    <FaFlag /> Denunciar
                                 </button>
-                                <button
-                                    onClick={handleDelete}
-                                    disabled={deleting}
-                                    className="w-full flex items-center gap-2 px-4 py-3 text-red-400 hover:bg-white/10 transition-colors"
-                                >
-                                    <FaTrash /> {deleting ? 'Excluindo...' : 'Excluir'}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Type Badge */}
@@ -195,7 +207,6 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                 </button>
             </div>
 
-            {/* Comments Section */}
             <AnimatePresence>
                 {showComments && (
                     <CommentSection
@@ -204,6 +215,14 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Report Modal */}
+            <ReportModal
+                isOpen={showReportModal}
+                onClose={() => setShowReportModal(false)}
+                contentId={dream.id_publicacao}
+                contentType={1}
+            />
         </div>
     );
 };

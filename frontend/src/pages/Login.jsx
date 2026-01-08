@@ -29,7 +29,10 @@ const Login = () => {
             // Redirect to feed/home
             navigate('/feed');
         } catch (err) {
-            if (err.response?.status === 401) {
+            if (err.response?.status === 403 && err.response?.data?.banned) {
+                // User is banned
+                setError(err.response.data.message || 'Sua conta foi banida por tempo indeterminado.');
+            } else if (err.response?.status === 401) {
                 setError('Email ou senha inválidos. Por favor, tente novamente.');
             } else if (err.response?.data?.detail) {
                 setError(err.response.data.detail);
