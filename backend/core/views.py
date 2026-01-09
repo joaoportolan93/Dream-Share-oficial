@@ -9,6 +9,8 @@ from django.db import models
 import os
 import uuid
 from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, LogoutSerializer
+from .throttles import LoginRateThrottle, RegisterRateThrottle
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 User = get_user_model()
 
@@ -61,6 +63,29 @@ class SearchView(APIView):
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = (permissions.AllowAny,)
+    throttle_classes = [RegisterRateThrottle]
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """Custom login view with rate limiting and ban check"""
+    throttle_classes = [LoginRateThrottle]
+
+    def post(self, request, *args, **kwargs):
+        # First check if user is banned before attempting login
+        email = request.data.get('email')
+        if email:
+            try:
+                user = User.objects.get(email=email)
+                if user.status == 2:  # Suspenso/Banido
+                    return Response({
+                        'error': 'Conta banida',
+                        'message': 'Sua conta foi banida por tempo indeterminado devido a violação das regras da comunidade.',
+                        'banned': True
+                    }, status=status.HTTP_403_FORBIDDEN)
+            except User.DoesNotExist:
+                pass  # Let the parent handle invalid credentials
+        
+        return super().post(request, *args, **kwargs)
 
 class UserProfileView(APIView):
     """Get current authenticated user's profile"""
@@ -77,7 +102,30 @@ class UserDetailView(APIView):
     def get(self, request, pk):
         user = get_object_or_404(User, pk=pk)
         serializer = UserSerializer(user, context={'request': request})
-        return Response(serializer.data)
+        data = serializer.data
+        
+        # Add ban info if user is banned
+        if user.status == 2:
+            # Try to find the most recent resolved report against this user
+            from .models import Denuncia
+            last_report = Denuncia.objects.filter(
+                tipo_conteudo=3,  # User report
+                id_conteudo=user.id_usuario,
+                status_denuncia=3  # Resolved
+            ).order_by('-data_resolucao').first()
+            
+            ban_reasons = {
+                1: 'Conteúdo Inadequado',
+                2: 'Assédio / Discurso de Ódio',
+                3: 'Spam / Enganoso'
+            }
+            
+            data['is_banned'] = True
+            data['ban_reason'] = ban_reasons.get(last_report.motivo_denuncia, 'Violação das regras') if last_report else 'Violação das regras da comunidade'
+        else:
+            data['is_banned'] = False
+        
+        return Response(data)
 
     def put(self, request, pk):
         user = get_object_or_404(User, pk=pk)
@@ -215,12 +263,16 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
             usuario_seguidor=user, status=1
         ).values_list('usuario_seguido_id', flat=True)
 
+        # Base filter: exclude posts from banned users (status=2)
+        base_filter = Q(usuario__status=1)  # Only active users
+
         if self.action == 'list':
             tab = self.request.query_params.get('tab', 'following')
             
             if tab == 'foryou':
                 # For You: Public dreams ordered by engagement (likes + comments)
                 return Publicacao.objects.filter(
+                    base_filter,
                     visibilidade=1
                 ).annotate(
                     engagement=Count('reacaopublicacao', distinct=True) + Count('comentario', distinct=True)
@@ -228,12 +280,14 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
             
             # Following: Dreams from people user follows + own dreams
             return Publicacao.objects.filter(
+                base_filter,
                 Q(usuario__in=following_ids) | Q(usuario=user)
             ).order_by('-data_publicacao')
 
         # For detailed actions (retrieve, like, etc), return all accessible posts
-        # Accessible = Public OR Own OR Followed
+        # Accessible = Public OR Own OR Followed (but not from banned users)
         return Publicacao.objects.filter(
+            base_filter,
             Q(visibilidade=1) | 
             Q(usuario=user) | 
             Q(usuario__in=following_ids)
@@ -494,4 +548,304 @@ def create_notification(usuario_destino, usuario_origem, tipo, id_referencia=Non
             conteudo=conteudo
         )
 
+
+# ==========================================
+# ADMIN VIEWS - Issue #29
+# ==========================================
+
+from .models import Denuncia
+from datetime import timedelta
+
+class IsAdminPermission(permissions.BasePermission):
+    """Custom permission to only allow admins"""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_admin
+
+
+class AdminStatsView(APIView):
+    """Admin dashboard statistics - Issue #29"""
+    permission_classes = [IsAdminPermission]
+
+    def get(self, request):
+        today = timezone.now().date()
+        week_ago = today - timedelta(days=7)
+
+        # Basic stats
+        total_users = User.objects.count()
+        banned_users = User.objects.filter(status=2).count()
+        total_dreams = Publicacao.objects.count()
+        pending_reports = Denuncia.objects.filter(status_denuncia=1).count()
+
+        # Last 7 days data for charts
+        daily_stats = []
+        for i in range(7):
+            day = today - timedelta(days=6-i)
+            next_day = day + timedelta(days=1)
+            signups = User.objects.filter(
+                data_criacao__date=day
+            ).count()
+            reports = Denuncia.objects.filter(
+                data_denuncia__date=day
+            ).count()
+            daily_stats.append({
+                'date': day.isoformat(),
+                'signups': signups,
+                'reports': reports
+            })
+
+        return Response({
+            'kpis': {
+                'total_users': total_users,
+                'banned_users': banned_users,
+                'total_dreams': total_dreams,
+                'pending_reports': pending_reports,
+            },
+            'daily_stats': daily_stats
+        })
+
+
+class AdminUsersView(APIView):
+    """Admin user management - Issue #29"""
+    permission_classes = [IsAdminPermission]
+
+    def get(self, request):
+        search = request.query_params.get('search', '')
+        users = User.objects.all()
+        
+        if search:
+            users = users.filter(
+                models.Q(nome_usuario__icontains=search) |
+                models.Q(email__icontains=search) |
+                models.Q(id_usuario__icontains=search) if search.isdigit() else models.Q(nome_usuario__icontains=search)
+            )
+        
+        users = users.order_by('-data_criacao')[:100]
+        
+        data = [{
+            'id_usuario': u.id_usuario,
+            'nome_usuario': u.nome_usuario,
+            'email': u.email,
+            'nome_completo': u.nome_completo,
+            'avatar_url': u.avatar_url,
+            'status': u.status,
+            'status_display': dict(User.STATUS_CHOICES).get(u.status, 'Unknown'),
+            'data_criacao': u.data_criacao.isoformat(),
+            'is_admin': u.is_admin,
+        } for u in users]
+        
+        return Response(data)
+
+
+class AdminUserDetailView(APIView):
+    """Admin user detail/actions - Issue #29"""
+    permission_classes = [IsAdminPermission]
+
+    def get(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        return Response({
+            'id_usuario': user.id_usuario,
+            'nome_usuario': user.nome_usuario,
+            'email': user.email,
+            'nome_completo': user.nome_completo,
+            'bio': user.bio,
+            'avatar_url': user.avatar_url,
+            'data_nascimento': user.data_nascimento,
+            'data_criacao': user.data_criacao.isoformat(),
+            'status': user.status,
+            'is_admin': user.is_admin,
+            'verificado': user.verificado,
+            'posts_count': Publicacao.objects.filter(usuario=user).count(),
+            'followers_count': Seguidor.objects.filter(usuario_seguido=user, status=1).count(),
+            'following_count': Seguidor.objects.filter(usuario_seguidor=user, status=1).count(),
+        })
+
+    def patch(self, request, pk):
+        """Update user status (ban/unban)"""
+        user = get_object_or_404(User, pk=pk)
+        new_status = request.data.get('status')
+        
+        if new_status in [1, 2, 3]:
+            user.status = new_status
+            user.save()
+            return Response({'message': 'Status atualizado', 'status': new_status})
+        
+        return Response({'error': 'Status inválido'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminReportsView(APIView):
+    """Admin moderation queue - Issue #29"""
+    permission_classes = [IsAdminPermission]
+
+    def get(self, request):
+        status_filter = request.query_params.get('status', '1')  # Default pending
+        reports = Denuncia.objects.filter(status_denuncia=int(status_filter)).order_by('-data_denuncia')[:50]
+        
+        data = []
+        for r in reports:
+            item = {
+                'id_denuncia': r.id_denuncia,
+                'tipo_conteudo': r.tipo_conteudo,
+                'tipo_conteudo_display': dict(Denuncia.TIPO_CONTEUDO_CHOICES).get(r.tipo_conteudo),
+                'id_conteudo': r.id_conteudo,
+                'motivo_denuncia': r.motivo_denuncia,
+                'motivo_display': dict(Denuncia.MOTIVO_DENUNCIA_CHOICES).get(r.motivo_denuncia),
+                'descricao_denuncia': r.descricao_denuncia,
+                'data_denuncia': r.data_denuncia.isoformat(),
+                'status_denuncia': r.status_denuncia,
+                'reporter': {
+                    'id': r.usuario_denunciante.id_usuario,
+                    'username': r.usuario_denunciante.nome_usuario,
+                }
+            }
+            
+            # Get reported content
+            if r.tipo_conteudo == 1:  # Post
+                post = Publicacao.objects.filter(id_publicacao=r.id_conteudo).first()
+                if post:
+                    item['content'] = {
+                        'type': 'post',
+                        'id': post.id_publicacao,
+                        'titulo': post.titulo,
+                        'conteudo_texto': post.conteudo_texto,
+                        'usuario': {
+                            'id': post.usuario.id_usuario,
+                            'username': post.usuario.nome_usuario,
+                        }
+                    }
+            elif r.tipo_conteudo == 2:  # Comment
+                comment = Comentario.objects.filter(id_comentario=r.id_conteudo).first()
+                if comment:
+                    item['content'] = {
+                        'type': 'comment',
+                        'id': comment.id_comentario,
+                        'texto': comment.conteudo_texto,
+                        'usuario': {
+                            'id': comment.usuario.id_usuario,
+                            'username': comment.usuario.nome_usuario,
+                        }
+                    }
+            elif r.tipo_conteudo == 3:  # User
+                reported_user = User.objects.filter(id_usuario=r.id_conteudo).first()
+                if reported_user:
+                    item['content'] = {
+                        'type': 'user',
+                        'id': reported_user.id_usuario,
+                        'username': reported_user.nome_usuario,
+                    }
+            
+            data.append(item)
+        
+        return Response(data)
+
+
+class AdminReportActionView(APIView):
+    """Handle report actions - Issue #29"""
+    permission_classes = [IsAdminPermission]
+
+    def post(self, request, pk):
+        report = get_object_or_404(Denuncia, pk=pk)
+        action = request.data.get('action')  # ignore, remove, ban
+
+        if action == 'ignore':
+            report.status_denuncia = 3  # Resolvida
+            report.acao_tomada = 1  # Nenhuma
+            report.data_resolucao = timezone.now()
+            report.save()
+            return Response({'message': 'Denúncia ignorada'})
+
+        elif action == 'remove':
+            # Remove content based on type
+            if report.tipo_conteudo == 1:  # Post
+                Publicacao.objects.filter(id_publicacao=report.id_conteudo).delete()
+            elif report.tipo_conteudo == 2:  # Comment
+                Comentario.objects.filter(id_comentario=report.id_conteudo).update(status=2)
+            
+            report.status_denuncia = 3
+            report.acao_tomada = 2  # Removido
+            report.data_resolucao = timezone.now()
+            report.save()
+            return Response({'message': 'Conteúdo removido'})
+
+        elif action == 'ban':
+            # Get user to ban based on content type
+            user_to_ban = None
+            if report.tipo_conteudo == 1:
+                post = Publicacao.objects.filter(id_publicacao=report.id_conteudo).first()
+                if post:
+                    user_to_ban = post.usuario
+            elif report.tipo_conteudo == 2:
+                comment = Comentario.objects.filter(id_comentario=report.id_conteudo).first()
+                if comment:
+                    user_to_ban = comment.usuario
+            elif report.tipo_conteudo == 3:
+                user_to_ban = User.objects.filter(id_usuario=report.id_conteudo).first()
+            
+            if user_to_ban:
+                user_to_ban.status = 2  # Suspenso
+                user_to_ban.save()
+            
+            report.status_denuncia = 3
+            report.acao_tomada = 3  # Usuário Suspenso
+            report.data_resolucao = timezone.now()
+            report.save()
+            return Response({'message': 'Usuário banido'})
+
+        return Response({'error': 'Ação inválida'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CreateReportView(APIView):
+    """Create a new report (denuncia) from users"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        id_conteudo = request.data.get('id_conteudo')
+        tipo_conteudo = request.data.get('tipo_conteudo')
+        motivo_denuncia = request.data.get('motivo_denuncia')
+        descricao_denuncia = request.data.get('descricao_denuncia')
+
+        if not all([id_conteudo, tipo_conteudo, motivo_denuncia]):
+            return Response(
+                {'error': 'Campos obrigatórios: id_conteudo, tipo_conteudo, motivo_denuncia'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate tipo_conteudo
+        if tipo_conteudo not in [1, 2, 3]:
+            return Response(
+                {'error': 'tipo_conteudo inválido. Use: 1 (Post), 2 (Comment), 3 (User)'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate motivo_denuncia
+        if motivo_denuncia not in [1, 2, 3]:
+            return Response(
+                {'error': 'motivo_denuncia inválido. Use: 1, 2 ou 3'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if content exists
+        if tipo_conteudo == 1:
+            if not Publicacao.objects.filter(id_publicacao=id_conteudo).exists():
+                return Response({'error': 'Publicação não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        elif tipo_conteudo == 2:
+            if not Comentario.objects.filter(id_comentario=id_conteudo).exists():
+                return Response({'error': 'Comentário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        elif tipo_conteudo == 3:
+            if not User.objects.filter(id_usuario=id_conteudo).exists():
+                return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Create report
+        report = Denuncia.objects.create(
+            usuario_denunciante=request.user,
+            tipo_conteudo=tipo_conteudo,
+            id_conteudo=id_conteudo,
+            motivo_denuncia=motivo_denuncia,
+            descricao_denuncia=descricao_denuncia,
+            status_denuncia=1  # Pendente
+        )
+
+        return Response({
+            'message': 'Denúncia enviada com sucesso',
+            'id_denuncia': report.id_denuncia
+        }, status=status.HTTP_201_CREATED)
 

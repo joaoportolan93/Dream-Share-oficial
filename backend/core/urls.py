@@ -1,10 +1,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
+from rest_framework_simplejwt.views import TokenRefreshView
+from .views import (
+    RegisterView, UserProfileView, UserDetailView, LogoutView, 
+    AvatarUploadView, PublicacaoViewSet, FollowView, SuggestedUsersView, 
+    ComentarioViewSet, NotificacaoViewSet, SearchView, CustomTokenObtainPairView,
+    AdminStatsView, AdminUsersView, AdminUserDetailView, AdminReportsView, AdminReportActionView,
+    CreateReportView
 )
-from .views import RegisterView, UserProfileView, UserDetailView, LogoutView, AvatarUploadView, PublicacaoViewSet, FollowView, SuggestedUsersView, ComentarioViewSet, NotificacaoViewSet, SearchView
 
 # Router for ViewSets
 router = DefaultRouter()
@@ -18,7 +21,7 @@ comments_detail = ComentarioViewSet.as_view({'get': 'retrieve', 'put': 'update',
 urlpatterns = [
     # Auth endpoints
     path('auth/register/', RegisterView.as_view(), name='register'),
-    path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     
@@ -36,8 +39,16 @@ urlpatterns = [
     path('dreams/<int:dream_pk>/comments/', comments_list, name='dream-comments-list'),
     path('dreams/<int:dream_pk>/comments/<int:pk>/', comments_detail, name='dream-comments-detail'),
     
+    # Admin endpoints - Issue #29
+    path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
+    path('admin/users/', AdminUsersView.as_view(), name='admin-users'),
+    path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
+    path('admin/reports/', AdminReportsView.as_view(), name='admin-reports'),
+    path('admin/reports/<int:pk>/action/', AdminReportActionView.as_view(), name='admin-report-action'),
+    
+    # User reports
+    path('denuncias/', CreateReportView.as_view(), name='create-report'),
+    
     # Include router URLs (dreams CRUD + notifications)
     path('', include(router.urls)),
 ]
-
-

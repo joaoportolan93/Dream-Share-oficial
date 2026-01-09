@@ -41,6 +41,7 @@ class Usuario(AbstractBaseUser):
     data_nascimento = models.DateField(null=True, blank=True)
     data_criacao = models.DateTimeField(default=timezone.now)
     verificado = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=False)
     
     STATUS_CHOICES = (
         (1, 'Ativo'),
@@ -65,6 +66,16 @@ class Usuario(AbstractBaseUser):
 
     def __str__(self):
         return self.nome_usuario
+
+    @property
+    def is_staff(self):
+        return self.is_admin
+
+    def has_perm(self, perm, obj=None):
+        return self.is_admin
+
+    def has_module_perms(self, app_label):
+        return self.is_admin
 
 class Seguidor(models.Model):
     id_seguidor = models.AutoField(primary_key=True)
