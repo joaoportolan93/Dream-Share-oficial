@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class UsuarioManager(BaseUserManager):
     def create_user(self, email, nome_usuario, nome_completo, password=None):
@@ -88,6 +90,7 @@ class Seguidor(models.Model):
         (2, 'Bloqueado'),
     )
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=1)
+    is_close_friend = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'seguidores'
@@ -354,3 +357,10 @@ class ConfiguracaoUsuario(models.Model):
 
     class Meta:
         db_table = 'configuracoes_usuario'
+
+
+# Signal to auto-create ConfiguracaoUsuario when a new Usuario is created
+@receiver(post_save, sender=Usuario)
+def create_user_settings(sender, instance, created, **kwargs):
+    if created:
+        ConfiguracaoUsuario.objects.get_or_create(usuario=instance)

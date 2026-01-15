@@ -6,7 +6,7 @@ from .views import (
     AvatarUploadView, PublicacaoViewSet, FollowView, SuggestedUsersView, 
     ComentarioViewSet, NotificacaoViewSet, SearchView, CustomTokenObtainPairView,
     AdminStatsView, AdminUsersView, AdminUserDetailView, AdminReportsView, AdminReportActionView,
-    CreateReportView
+    CreateReportView, UserSettingsView, CloseFriendsManagerView, ToggleCloseFriendView
 )
 
 # Router for ViewSets
@@ -48,6 +48,11 @@ urlpatterns = [
     
     # User reports
     path('denuncias/', CreateReportView.as_view(), name='create-report'),
+    
+    # Settings and Close Friends endpoints
+    path('settings/', UserSettingsView.as_view(), name='user-settings'),
+    path('friends/manage/', CloseFriendsManagerView.as_view(), name='close-friends-manage'),
+    path('friends/toggle/<int:pk>/', ToggleCloseFriendView.as_view(), name='close-friends-toggle'),
     
     # Include router URLs (dreams CRUD + notifications)
     path('', include(router.urls)),

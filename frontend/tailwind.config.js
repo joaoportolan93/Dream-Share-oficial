@@ -35,6 +35,8 @@ module.exports = {
                     bg: '#211950',         // Dark Cosmic Blue (User Ref)
                     purple: '#8A2BE2',     // Bright Purple (User Ref)
                     card: 'rgba(33, 25, 80, 0.7)', // Translucent card for dark mode
+                    'text-muted': '#9ca3af', // Gray-400 equivalent for cosmic theme
+                    accent: '#8B5CF6',     // Purple accent for cosmic theme
                 },
                 border: {
                     DEFAULT: '#E5E7EB', // Cinza borda

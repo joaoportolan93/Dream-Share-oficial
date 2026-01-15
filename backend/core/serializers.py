@@ -216,4 +216,47 @@ class SearchSerializer(serializers.Serializer):
     counts = serializers.DictField()
 
 
+# User Settings Serializers
+from .models import ConfiguracaoUsuario
+
+class UserSettingsSerializer(serializers.ModelSerializer):
+    """Serializer for user settings (ConfiguracaoUsuario)"""
+    class Meta:
+        model = ConfiguracaoUsuario
+        fields = (
+            'notificacoes_novas_publicacoes',
+            'notificacoes_comentarios',
+            'notificacoes_seguidor_novo',
+            'notificacoes_reacoes',
+            'notificacoes_mensagens_diretas',
+            'tema_interface',
+            'idioma',
+            'mostrar_visualizacoes',
+            'ultima_atualizacao'
+        )
+        read_only_fields = ('ultima_atualizacao',)
+
+
+class CloseFriendSerializer(serializers.ModelSerializer):
+    """Serializer for followers with close friend status"""
+    id_usuario = serializers.IntegerField(source='usuario_seguidor.id_usuario', read_only=True)
+    nome_usuario = serializers.CharField(source='usuario_seguidor.nome_usuario', read_only=True)
+    nome_completo = serializers.CharField(source='usuario_seguidor.nome_completo', read_only=True)
+    avatar_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Seguidor
+        fields = ('id_usuario', 'nome_usuario', 'nome_completo', 'avatar_url', 'is_close_friend')
+        
+    def get_avatar_url(self, obj):
+        user = obj.usuario_seguidor
+        if user.avatar_url:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(user.avatar_url)
+            return user.avatar_url
+        return None
+
+
+
 
