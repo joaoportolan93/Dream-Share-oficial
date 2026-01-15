@@ -87,11 +87,11 @@ const Notifications = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                     >
-                        <FaArrowLeft className="text-gray-300" />
+                        <FaArrowLeft className="text-gray-600 dark:text-gray-300" />
                     </button>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                         <FaBell className="text-primary" />
                         Notificações
                         {unreadCount > 0 && (
@@ -136,15 +136,15 @@ const Notifications = () => {
                     {notifications.length === 0 ? (
                         <div className="text-center py-12">
                             <FaBell className="text-6xl text-gray-600 mx-auto mb-4" />
-                            <p className="text-gray-400 text-lg">Nenhuma notificação ainda</p>
-                            <p className="text-gray-500">Quando alguém interagir com você, aparecerá aqui</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-lg">Nenhuma notificação ainda</p>
+                            <p className="text-gray-400 dark:text-gray-500">Quando alguém interagir com você, aparecerá aqui</p>
                         </div>
                     ) : (
                         notifications.map(notification => (
                             <Link
                                 key={notification.id_notificacao}
                                 to={notification.id_referencia ? `/dream/${notification.id_referencia}` : `/user/${notification.usuario_origem?.id_usuario}`}
-                                className={`flex items-start gap-4 p-4 rounded-xl transition-colors hover:bg-white/5 ${!notification.lida ? 'bg-white/5 border-l-4 border-primary' : ''
+                                className={`flex items-start gap-4 p-4 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${!notification.lida ? 'bg-gray-100 dark:bg-white/5 border-l-4 border-primary' : ''
                                     }`}
                             >
                                 {/* User Avatar */}
@@ -154,20 +154,20 @@ const Notifications = () => {
                                         alt={notification.usuario_origem?.nome_completo}
                                         className="w-12 h-12 rounded-full object-cover"
                                     />
-                                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center">
+                                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-900 shadow flex items-center justify-center">
                                         {getIcon(notification.tipo_notificacao_display)}
                                     </div>
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-white">
+                                    <p className="text-gray-900 dark:text-white">
                                         <span className="font-semibold">
                                             {notification.usuario_origem?.nome_completo || 'Alguém'}
                                         </span>{' '}
-                                        <span className="text-gray-300">{getMessage(notification)}</span>
+                                        <span className="text-gray-600 dark:text-gray-300">{getMessage(notification)}</span>
                                     </p>
-                                    <p className="text-sm text-gray-500 mt-1">{formatDate(notification.data_criacao)}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{formatDate(notification.data_criacao)}</p>
                                 </div>
 
                                 {/* Unread Indicator */}

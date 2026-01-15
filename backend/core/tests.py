@@ -150,3 +150,58 @@ class TestSearch:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']['posts']) == 1
         assert response.data['results']['posts'][0]['titulo'] == "Flying Dream"
+
+
+@pytest.mark.django_db
+class TestSettings:
+    def test_get_settings_creates_if_missing(self, auth_client, user):
+        """Settings should be auto-created if missing"""
+        url = reverse('user-settings')
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert 'notificacoes_novas_publicacoes' in response.data
+        assert 'tema_interface' in response.data
+        
+    def test_update_settings(self, auth_client, user):
+        """Settings should be updateable via PATCH"""
+        url = reverse('user-settings')
+        data = {'tema_interface': 2, 'notificacoes_comentarios': False}
+        response = auth_client.patch(url, data, format='json')
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['tema_interface'] == 2
+        assert response.data['notificacoes_comentarios'] is False
+
+
+@pytest.mark.django_db
+class TestCloseFriends:
+    def test_list_followers_for_management(self, auth_client, user):
+        """Should list followers with close friend status"""
+        # Create a follower
+        follower = UsuarioFactory()
+        Seguidor.objects.create(usuario_seguidor=follower, usuario_seguido=user)
+        
+        url = reverse('close-friends-manage')
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]['nome_usuario'] == follower.nome_usuario
+        assert response.data[0]['is_close_friend'] is False
+        
+    def test_toggle_close_friend(self, auth_client, user):
+        """Should toggle close friend status"""
+        # Create a follower
+        follower = UsuarioFactory()
+        Seguidor.objects.create(usuario_seguidor=follower, usuario_seguido=user)
+        
+        url = reverse('close-friends-toggle', args=[follower.id_usuario])
+        
+        # Toggle ON
+        response = auth_client.post(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['is_close_friend'] is True
+        
+        # Toggle OFF
+        response = auth_client.post(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['is_close_friend'] is False
+

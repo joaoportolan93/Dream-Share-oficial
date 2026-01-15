@@ -269,6 +269,12 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             tab = self.request.query_params.get('tab', 'following')
             
+            if tab == 'mine':
+                # My Dreams: All dreams by the current user
+                return Publicacao.objects.filter(
+                    usuario=user
+                ).order_by('-data_publicacao')
+            
             if tab == 'foryou':
                 # For You: Public dreams ordered by engagement (likes + comments)
                 return Publicacao.objects.filter(
@@ -538,8 +544,29 @@ class NotificacaoViewSet(viewsets.ModelViewSet):
 
 # Helper function to create notifications
 def create_notification(usuario_destino, usuario_origem, tipo, id_referencia=None, conteudo=None):
-    """Create a notification if destino != origem"""
+    """Create a notification if destino != origem AND user has that notification type enabled"""
     if usuario_destino.id_usuario != usuario_origem.id_usuario:
+        # Check user's notification settings
+        try:
+            settings = ConfiguracaoUsuario.objects.get(usuario=usuario_destino)
+            
+            # Map notification types to settings fields
+            # tipo: 1=Nova Publicação, 2=Comentário, 3=Curtida, 4=Seguidor Novo
+            notification_settings = {
+                1: settings.notificacoes_novas_publicacoes,
+                2: settings.notificacoes_comentarios,
+                3: settings.notificacoes_reacoes,
+                4: settings.notificacoes_seguidor_novo,
+            }
+            
+            # Check if this notification type is enabled
+            if not notification_settings.get(tipo, True):
+                return  # User has disabled this notification type
+                
+        except ConfiguracaoUsuario.DoesNotExist:
+            # No settings exist, allow all notifications by default
+            pass
+        
         Notificacao.objects.create(
             usuario_destino=usuario_destino,
             usuario_origem=usuario_origem,
@@ -848,4 +875,74 @@ class CreateReportView(APIView):
             'message': 'Denúncia enviada com sucesso',
             'id_denuncia': report.id_denuncia
         }, status=status.HTTP_201_CREATED)
+
+
+# ==========================================
+# USER SETTINGS & CLOSE FRIENDS VIEWS
+# ==========================================
+
+from .models import ConfiguracaoUsuario
+from .serializers import UserSettingsSerializer, CloseFriendSerializer
+
+class UserSettingsView(APIView):
+    """Get or update user settings (ConfiguracaoUsuario)"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        # Auto-create settings if not exists (for existing users)
+        settings_obj, created = ConfiguracaoUsuario.objects.get_or_create(
+            usuario=request.user
+        )
+        serializer = UserSettingsSerializer(settings_obj)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        settings_obj, created = ConfiguracaoUsuario.objects.get_or_create(
+            usuario=request.user
+        )
+        serializer = UserSettingsSerializer(settings_obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save(ultima_atualizacao=timezone.now())
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CloseFriendsManagerView(APIView):
+    """List followers with close friend status for management"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        # Get all people who follow the current user (they can be close friends)
+        followers = Seguidor.objects.filter(
+            usuario_seguido=request.user,
+            status=1
+        ).select_related('usuario_seguidor').order_by('-is_close_friend', '-data_seguimento')
+        
+        serializer = CloseFriendSerializer(followers, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
+class ToggleCloseFriendView(APIView):
+    """Toggle close friend status for a follower"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, pk):
+        # Find the follow relationship where pk is the follower's user id
+        follow = get_object_or_404(
+            Seguidor,
+            usuario_seguidor_id=pk,
+            usuario_seguido=request.user,
+            status=1
+        )
+        
+        # Toggle the close friend status
+        follow.is_close_friend = not follow.is_close_friend
+        follow.save()
+        
+        return Response({
+            'id_usuario': pk,
+            'is_close_friend': follow.is_close_friend,
+            'message': 'Amigo próximo adicionado' if follow.is_close_friend else 'Amigo próximo removido'
+        }, status=status.HTTP_200_OK)
+
 

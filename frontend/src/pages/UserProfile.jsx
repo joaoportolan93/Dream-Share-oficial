@@ -86,7 +86,7 @@ const UserProfile = () => {
     if (!user) {
         return (
             <div className="text-center py-12">
-                <p className="text-gray-400">Usuário não encontrado</p>
+                <p className="text-gray-500 dark:text-gray-400">Usuário não encontrado</p>
                 <Link to="/" className="text-purple-400 hover:underline mt-4 inline-block">
                     Voltar ao feed
                 </Link>
@@ -100,7 +100,7 @@ const UserProfile = () => {
     return (
         <div className="min-h-screen">
             {/* Back Button */}
-            <Link to="/" className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+            <Link to="/" className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors">
                 <FaArrowLeft />
                 <span>Voltar</span>
             </Link>
@@ -210,10 +210,10 @@ const UserProfile = () => {
 
             {/* User's Dreams */}
             <div className="mt-8">
-                <h3 className="text-xl font-bold text-white mb-4">Sonhos de {user.nome_usuario}</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Sonhos de {user.nome_usuario}</h3>
                 {userDreams.length === 0 ? (
                     <div className="text-center py-8">
-                        <p className="text-gray-400">Este usuário ainda não compartilhou sonhos públicos.</p>
+                        <p className="text-gray-500 dark:text-gray-400">Este usuário ainda não compartilhou sonhos públicos.</p>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4">

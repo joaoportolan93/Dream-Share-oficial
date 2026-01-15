@@ -74,6 +74,8 @@ export const uploadAvatar = (file) => {
 // Dreams (Publicacao) endpoints
 export const getDreams = (tab = 'following') => api.get(`/api/dreams/?tab=${tab}`);
 
+export const getMyDreams = () => api.get('/api/dreams/?tab=mine');
+
 export const createDream = (data) => api.post('/api/dreams/', data);
 
 export const getDream = (id) => api.get(`/api/dreams/${id}/`);
@@ -107,6 +109,17 @@ export const markAllNotificationsRead = () => api.patch('/api/notifications/read
 
 export const search = (query, type = 'all', limit = 20) => api.get(`/api/search/?q=${query}&type=${type}&limit=${limit}`);
 
+// Settings endpoints
+export const getUserSettings = () => api.get('/api/settings/');
+
+export const updateUserSettings = (data) => api.patch('/api/settings/', data);
+
+// Close Friends endpoints
+export const getCloseFriendsManage = () => api.get('/api/friends/manage/');
+
+export const toggleCloseFriend = (userId) => api.post(`/api/friends/toggle/${userId}/`);
+
 export default api;
+
 
 

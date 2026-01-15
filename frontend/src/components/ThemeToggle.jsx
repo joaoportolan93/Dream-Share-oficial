@@ -4,15 +4,18 @@ import { FaSun, FaMoon } from 'react-icons/fa';
 /**
  * ThemeToggle Component
  * Allows users to switch between Light and Cosmic Dark modes.
- * Persists preference in localStorage.
+ * Syncs with localStorage and respects Settings page preferences.
  */
 const ThemeToggle = () => {
     // Initialize theme from localStorage, defaulting to dark mode
     const [isDark, setIsDark] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                return savedTheme === 'dark';
+            if (savedTheme === 'light') {
+                return false;
+            } else if (savedTheme === 'system') {
+                // Follow system preference
+                return window.matchMedia('(prefers-color-scheme: dark)').matches;
             }
             return true; // Default to dark mode
         }
@@ -23,15 +26,33 @@ const ThemeToggle = () => {
         const root = document.documentElement;
         if (isDark) {
             root.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
         } else {
             root.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
         }
     }, [isDark]);
 
+    // Listen for localStorage changes (from Settings page)
+    useEffect(() => {
+        const handleStorageChange = (e) => {
+            if (e.key === 'theme') {
+                if (e.newValue === 'light') {
+                    setIsDark(false);
+                } else if (e.newValue === 'system') {
+                    setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+                } else {
+                    setIsDark(true);
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
+
     const toggleTheme = () => {
-        setIsDark(!isDark);
+        const newIsDark = !isDark;
+        setIsDark(newIsDark);
+        localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
     };
 
     return (

@@ -81,7 +81,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
     };
 
     return (
-        <div className={`bg-white/5 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/10 transition-colors ${dream.visibilidade === 2 ? 'border border-green-500/30' : ''}`}>
+        <div className={`bg-white dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-card dark:shadow-none hover:bg-gray-50 dark:hover:bg-white/10 transition-colors ${dream.visibilidade === 2 ? 'border border-green-500/30' : ''}`}>
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -94,7 +94,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                     </Link>
                     <div>
                         <div className="flex items-center gap-2">
-                            <Link to={`/user/${dream.usuario?.id_usuario}`} className="font-semibold text-white hover:text-primary transition-colors">
+                            <Link to={`/user/${dream.usuario?.id_usuario}`} className="font-semibold text-gray-900 dark:text-white hover:text-primary transition-colors">
                                 {dream.usuario?.nome_completo}
                             </Link>
                             {dream.visibilidade === 2 && (
@@ -103,7 +103,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                                 </div>
                             )}
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
                             @{dream.usuario?.nome_usuario} · {formatDate(dream.data_publicacao)}
                         </p>
                     </div>
@@ -115,15 +115,15 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                         onClick={() => setShowMenu(!showMenu)}
                         className="p-2 rounded-full hover:bg-white/10 transition-colors"
                     >
-                        <FaEllipsisH className="text-gray-400" />
+                        <FaEllipsisH className="text-gray-500 dark:text-gray-400" />
                     </button>
                     {showMenu && (
-                        <div className="absolute right-0 top-10 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-10 min-w-[150px]">
+                        <div className="absolute right-0 top-10 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-lg shadow-xl z-10 min-w-[150px]">
                             {isOwner && (
                                 <>
                                     <button
                                         onClick={() => { onEdit?.(dream); setShowMenu(false); }}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-white/10 transition-colors"
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                                     >
                                         <FaEdit /> Editar
                                     </button>
@@ -158,11 +158,11 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
 
             {/* Title */}
             {dream.titulo && (
-                <h3 className="text-xl font-bold text-white mb-2">{dream.titulo}</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{dream.titulo}</h3>
             )}
 
             {/* Content */}
-            <p className="text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
                 {dream.conteudo_texto}
             </p>
 
@@ -178,7 +178,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
             {dream.emocoes_sentidas && (
                 <div className="flex flex-wrap gap-2 mb-4">
                     {dream.emocoes_sentidas.split(',').map((emocao, index) => (
-                        <span key={index} className="px-3 py-1 bg-white/10 rounded-full text-sm text-gray-300">
+                        <span key={index} className="px-3 py-1 bg-gray-100 dark:bg-white/10 rounded-full text-sm text-gray-600 dark:text-gray-300">
                             {emocao.trim()}
                         </span>
                     ))}
@@ -186,7 +186,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
             )}
 
             {/* Actions */}
-            <div className="flex items-center gap-6 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-6 pt-4 border-t border-gray-200 dark:border-white/10">
                 <button
                     onClick={handleLike}
                     disabled={liking}

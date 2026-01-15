@@ -69,7 +69,7 @@ const Home = () => {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-white">Feed de Sonhos</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Feed de Sonhos</h1>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:opacity-90 transition-all"
@@ -80,12 +80,12 @@ const Home = () => {
             </div>
 
             {/* Feed Tabs */}
-            <div className="flex border-b border-white/10">
+            <div className="flex border-b border-gray-200 dark:border-white/10">
                 <button
                     onClick={() => handleTabChange('following')}
                     className={`flex items-center gap-2 px-6 py-4 text-base font-medium transition-all relative ${activeTab === 'following'
-                            ? 'text-purple-400'
-                            : 'text-gray-400 hover:text-gray-200'
+                        ? 'text-purple-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                         }`}
                 >
                     <FaUserFriends className={activeTab === 'following' ? 'text-purple-400' : ''} />
@@ -97,8 +97,8 @@ const Home = () => {
                 <button
                     onClick={() => handleTabChange('foryou')}
                     className={`flex items-center gap-2 px-6 py-4 text-base font-medium transition-all relative ${activeTab === 'foryou'
-                            ? 'text-orange-400'
-                            : 'text-gray-400 hover:text-gray-200'
+                        ? 'text-orange-400'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
                         }`}
                 >
                     <FaFire className={activeTab === 'foryou' ? 'text-orange-400' : ''} />
@@ -127,13 +127,13 @@ const Home = () => {
             {!loading && !error && dreams.length === 0 ? (
                 <div className="text-center py-12">
                     <FaMoon className="text-6xl text-gray-600 mx-auto mb-4" />
-                    <p className="text-gray-400 text-lg mb-2">
+                    <p className="text-gray-500 dark:text-gray-400 text-lg mb-2">
                         {activeTab === 'following'
                             ? 'Nenhum sonho de quem você segue ainda'
                             : 'Nenhum sonho em alta no momento'
                         }
                     </p>
-                    <p className="text-gray-500">
+                    <p className="text-gray-400 dark:text-gray-500">
                         {activeTab === 'following'
                             ? 'Siga outros sonhadores para ver seus sonhos aqui!'
                             : 'Volte mais tarde para ver os sonhos em destaque.'

@@ -36,7 +36,7 @@ const Post = ({ post }) => {
     };
 
     return (
-        <div className="bg-white rounded-xl p-5 shadow-card mb-6">
+        <div className="bg-white dark:bg-white/5 dark:backdrop-blur-sm rounded-xl p-5 shadow-card dark:shadow-none mb-6">
             <div className="flex items-center gap-3 mb-4">
                 <img
                     src={post.userImage}
@@ -44,17 +44,17 @@ const Post = ({ post }) => {
                     className="w-[40px] h-[40px] rounded-full object-cover"
                 />
                 <div className="flex flex-col">
-                    <span className="text-sm font-bold text-text-main">{post.userName}</span>
-                    <span className="text-xs text-text-secondary">{post.time}</span>
+                    <span className="text-sm font-bold text-text-main dark:text-white">{post.userName}</span>
+                    <span className="text-xs text-text-secondary dark:text-gray-400">{post.time}</span>
                 </div>
             </div>
 
-            <h3 className="text-lg font-bold text-text-main mb-2">{post.title}</h3>
-            <p className="text-text-secondary text-sm leading-relaxed mb-4">
+            <h3 className="text-lg font-bold text-text-main dark:text-white mb-2">{post.title}</h3>
+            <p className="text-text-secondary dark:text-gray-300 text-sm leading-relaxed mb-4">
                 {post.content}
             </p>
 
-            <div className="w-full h-[250px] bg-gray-200 rounded-lg mb-4 object-cover overflow-hidden">
+            <div className="w-full h-[250px] bg-gray-200 dark:bg-gray-800 rounded-lg mb-4 object-cover overflow-hidden">
                 <img src={post.image} alt="Dream" className="w-full h-full object-cover" />
             </div>
 
@@ -67,11 +67,11 @@ const Post = ({ post }) => {
             </div>
 
             {/* Interaction Buttons */}
-            <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+            <div className="flex items-center justify-between pt-4 border-t border-border dark:border-white/10 mt-4">
                 <div className="flex gap-6">
                     <button
                         onClick={handleLike}
-                        className={`flex items-center gap-2 text-sm font-medium transition-colors ${liked ? 'text-red-500' : 'text-text-secondary hover:text-red-500'}`}
+                        className={`flex items-center gap-2 text-sm font-medium transition-colors ${liked ? 'text-red-500' : 'text-text-secondary dark:text-gray-400 hover:text-red-500'}`}
                     >
                         {liked ? <FaHeart size={20} /> : <FaRegHeart size={20} />}
                         <span>{liked ? 'Curtido' : 'Curtir'}</span>
@@ -79,7 +79,7 @@ const Post = ({ post }) => {
 
                     <button
                         onClick={handleCommentToggle}
-                        className="flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-primary transition-colors"
+                        className="flex items-center gap-2 text-sm font-medium text-text-secondary dark:text-gray-400 hover:text-primary transition-colors"
                     >
                         <FaComment size={20} />
                         <span>Comentar</span>
@@ -87,7 +87,7 @@ const Post = ({ post }) => {
 
                     <button
                         onClick={handleRepost}
-                        className="flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-green-500 transition-colors"
+                        className="flex items-center gap-2 text-sm font-medium text-text-secondary dark:text-gray-400 hover:text-green-500 transition-colors"
                     >
                         <FaRetweet size={20} />
                         <span>Repostar</span>
@@ -96,7 +96,7 @@ const Post = ({ post }) => {
 
                 <button
                     onClick={handleSave}
-                    className={`flex items-center gap-2 text-sm font-medium transition-colors ${saved ? 'text-primary' : 'text-text-secondary hover:text-primary'}`}
+                    className={`flex items-center gap-2 text-sm font-medium transition-colors ${saved ? 'text-primary' : 'text-text-secondary dark:text-gray-400 hover:text-primary'}`}
                 >
                     {saved ? <FaBookmark size={20} /> : <FaRegBookmark size={20} />}
                 </button>
@@ -104,12 +104,12 @@ const Post = ({ post }) => {
 
             {/* Comments Section */}
             {showComments && (
-                <div className="mt-4 pt-4 border-t border-border bg-gray-50 rounded-lg p-4">
+                <div className="mt-4 pt-4 border-t border-border dark:border-white/10 bg-gray-50 dark:bg-white/5 rounded-lg p-4">
                     <div className="mb-4">
                         <input
                             type="text"
                             placeholder="Escreva um comentário..."
-                            className="w-full bg-white border border-gray-200 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-primary"
+                            className="w-full bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-full px-4 py-2 text-sm text-text-main dark:text-white focus:outline-none focus:border-primary dark:placeholder-gray-400"
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             onKeyDown={handleAddComment}
@@ -118,9 +118,9 @@ const Post = ({ post }) => {
                     <div className="space-y-3">
                         {comments.map((comment) => (
                             <div key={comment.id} className="flex gap-2">
-                                <div className="w-8 h-8 bg-gray-300 rounded-full flex-shrink-0"></div>
-                                <div className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm text-sm">
-                                    <span className="font-bold block text-xs mb-1">{comment.user}</span>
+                                <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex-shrink-0"></div>
+                                <div className="bg-white dark:bg-white/10 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-text-main dark:text-gray-200">
+                                    <span className="font-bold block text-xs mb-1 text-text-main dark:text-white">{comment.user}</span>
                                     {comment.text}
                                 </div>
                             </div>

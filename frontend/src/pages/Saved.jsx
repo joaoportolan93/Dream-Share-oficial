@@ -35,8 +35,8 @@ const Saved = () => {
                     <Post key={post.id} post={post} />
                 ))
             ) : (
-                <div className="bg-white rounded-xl p-8 text-center shadow-card">
-                    <p className="text-text-secondary">Você ainda não salvou nenhum sonho.</p>
+                <div className="bg-white dark:bg-white/5 rounded-xl p-8 text-center shadow-card dark:shadow-none">
+                    <p className="text-text-secondary dark:text-gray-400">Você ainda não salvou nenhum sonho.</p>
                 </div>
             )}
         </div>
