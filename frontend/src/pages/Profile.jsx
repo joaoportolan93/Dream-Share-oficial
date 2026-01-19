@@ -1,25 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake } from 'react-icons/fa';
-import { getProfile } from '../services/api';
+import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake, FaMoon } from 'react-icons/fa';
+import { getProfile, getMyDreams } from '../services/api';
+import DreamCard from '../components/DreamCard';
 
 const Profile = () => {
     const [activeTab, setActiveTab] = useState('dreams');
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [dreams, setDreams] = useState([]);
+    const [dreamsLoading, setDreamsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchData = async () => {
             try {
-                const response = await getProfile();
-                setUser(response.data);
+                const [profileRes, dreamsRes] = await Promise.all([
+                    getProfile(),
+                    getMyDreams()
+                ]);
+                setUser(profileRes.data);
+                setDreams(dreamsRes.data);
             } catch (error) {
                 console.error('Error fetching profile:', error);
             } finally {
                 setLoading(false);
+                setDreamsLoading(false);
             }
         };
-        fetchProfile();
+        fetchData();
     }, []);
 
     const formatDate = (dateString, type = 'join') => {
@@ -34,6 +42,10 @@ const Profile = () => {
             return `Nascido em ${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
         }
         return `Membro desde ${months[date.getMonth()]} de ${date.getFullYear()}`;
+    };
+
+    const handleDeleteDream = (dreamId) => {
+        setDreams(prev => prev.filter(d => d.id_publicacao !== dreamId));
     };
 
     if (loading) {
@@ -93,7 +105,7 @@ const Profile = () => {
 
                         <div className="flex gap-8 mb-6 justify-center md:justify-start">
                             <div className="text-center md:text-left">
-                                <div className="text-xl font-bold">0</div>
+                                <div className="text-xl font-bold">{dreams.length}</div>
                                 <div className="text-sm opacity-90">Sonhos</div>
                             </div>
                             <div className="text-center md:text-left">
@@ -125,11 +137,11 @@ const Profile = () => {
             {/* Content Container */}
             <div className="max-w-4xl mx-auto px-4">
                 {/* Tabs */}
-                <div className="flex border-b border-white/10 mb-8">
+                <div className="flex border-b border-gray-200 dark:border-white/10 mb-8">
                     <button
                         className={`px-6 py-4 text-base transition-colors ${activeTab === 'dreams'
                             ? 'border-b-4 border-purple-500 text-purple-400 font-semibold'
-                            : 'text-gray-400 hover:text-purple-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-purple-400'
                             }`}
                         onClick={() => setActiveTab('dreams')}
                     >
@@ -138,7 +150,7 @@ const Profile = () => {
                     <button
                         className={`px-6 py-4 text-base transition-colors ${activeTab === 'journal'
                             ? 'border-b-4 border-purple-500 text-purple-400 font-semibold'
-                            : 'text-gray-400 hover:text-purple-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-purple-400'
                             }`}
                         onClick={() => setActiveTab('journal')}
                     >
@@ -147,7 +159,7 @@ const Profile = () => {
                     <button
                         className={`px-6 py-4 text-base transition-colors ${activeTab === 'saved'
                             ? 'border-b-4 border-purple-500 text-purple-400 font-semibold'
-                            : 'text-gray-400 hover:text-purple-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-purple-400'
                             }`}
                         onClick={() => setActiveTab('saved')}
                     >
@@ -155,17 +167,67 @@ const Profile = () => {
                     </button>
                 </div>
 
-                {/* Empty State */}
-                <div className="text-center py-12">
-                    <p className="text-gray-400 text-lg mb-4">
-                        {activeTab === 'dreams' && 'Nenhum sonho registrado ainda.'}
-                        {activeTab === 'journal' && 'Seu diário está vazio.'}
-                        {activeTab === 'saved' && 'Nenhum sonho salvo ainda.'}
-                    </p>
-                    <p className="text-gray-500">
-                        Comece a registrar seus sonhos para vê-los aqui!
-                    </p>
-                </div>
+                {/* Dreams Tab Content */}
+                {activeTab === 'dreams' && (
+                    <>
+                        {dreamsLoading ? (
+                            <div className="flex justify-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                            </div>
+                        ) : dreams.length > 0 ? (
+                            <div className="flex flex-col gap-4">
+                                {dreams.map(dream => (
+                                    <DreamCard
+                                        key={dream.id_publicacao}
+                                        dream={dream}
+                                        currentUserId={user?.id_usuario}
+                                        onDelete={handleDeleteDream}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <FaMoon className="text-6xl text-gray-500 dark:text-gray-600 mx-auto mb-4" />
+                                <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+                                    Nenhum sonho registrado ainda.
+                                </p>
+                                <p className="text-gray-400 dark:text-gray-500 mb-6">
+                                    Comece a registrar seus sonhos para vê-los aqui!
+                                </p>
+                                <Link
+                                    to="/"
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:opacity-90 transition-all"
+                                >
+                                    Criar meu primeiro sonho
+                                </Link>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Journal Tab Content */}
+                {activeTab === 'journal' && (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+                            Seu diário está vazio.
+                        </p>
+                        <p className="text-gray-400 dark:text-gray-500">
+                            Em breve você poderá manter um diário de sonhos privado!
+                        </p>
+                    </div>
+                )}
+
+                {/* Saved Tab Content */}
+                {activeTab === 'saved' && (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+                            Nenhum sonho salvo ainda.
+                        </p>
+                        <p className="text-gray-400 dark:text-gray-500">
+                            Salve sonhos interessantes para encontrá-los facilmente aqui!
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );
