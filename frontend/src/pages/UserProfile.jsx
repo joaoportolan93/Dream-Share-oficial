@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaCalendarAlt, FaBirthdayCake, FaArrowLeft } from 'react-icons/fa';
+import { FaCalendarAlt, FaBirthdayCake, FaArrowLeft, FaLock } from 'react-icons/fa';
 import { getUser, getProfile, followUser, unfollowUser, getDreams } from '../services/api';
 import DreamCard from '../components/DreamCard';
 
@@ -9,7 +9,7 @@ const UserProfile = () => {
     const [user, setUser] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isFollowing, setIsFollowing] = useState(false);
+    const [followStatus, setFollowStatus] = useState('none'); // 'following', 'pending', 'none'
     const [followLoading, setFollowLoading] = useState(false);
     const [userDreams, setUserDreams] = useState([]);
 
@@ -22,12 +22,17 @@ const UserProfile = () => {
                 ]);
                 setUser(userRes.data);
                 setCurrentUser(profileRes.data);
-                setIsFollowing(userRes.data.is_following || false);
+                setFollowStatus(userRes.data.follow_status || 'none');
 
-                // Fetch user's dreams (all public ones)
-                const dreamsRes = await getDreams('foryou');
-                const filtered = dreamsRes.data.filter(d => d.usuario.id_usuario === parseInt(id));
-                setUserDreams(filtered);
+                // Fetch user's dreams only if can see them (not private or is following)
+                const isPrivate = userRes.data.privacidade_padrao === 2;
+                const canSee = !isPrivate || userRes.data.follow_status === 'following' || userRes.data.id_usuario === profileRes.data.id_usuario;
+
+                if (canSee) {
+                    const dreamsRes = await getDreams('foryou');
+                    const filtered = dreamsRes.data.filter(d => d.usuario.id_usuario === parseInt(id));
+                    setUserDreams(filtered);
+                }
             } catch (error) {
                 console.error('Error fetching user:', error);
             } finally {
@@ -40,20 +45,25 @@ const UserProfile = () => {
     const handleFollowToggle = async () => {
         setFollowLoading(true);
         try {
-            if (isFollowing) {
+            if (followStatus === 'following' || followStatus === 'pending') {
                 await unfollowUser(id);
-                setIsFollowing(false);
-                setUser(prev => ({
-                    ...prev,
-                    seguidores_count: prev.seguidores_count - 1
-                }));
+                setFollowStatus('none');
+                if (followStatus === 'following') {
+                    setUser(prev => ({
+                        ...prev,
+                        seguidores_count: prev.seguidores_count - 1
+                    }));
+                }
             } else {
-                await followUser(id);
-                setIsFollowing(true);
-                setUser(prev => ({
-                    ...prev,
-                    seguidores_count: prev.seguidores_count + 1
-                }));
+                const response = await followUser(id);
+                const newStatus = response.data.follow_status || 'following';
+                setFollowStatus(newStatus);
+                if (newStatus === 'following') {
+                    setUser(prev => ({
+                        ...prev,
+                        seguidores_count: prev.seguidores_count + 1
+                    }));
+                }
             }
         } catch (error) {
             console.error('Error toggling follow:', error);
@@ -182,16 +192,20 @@ const UserProfile = () => {
                             <button
                                 onClick={handleFollowToggle}
                                 disabled={followLoading}
-                                className={`px-8 py-3 rounded-full font-semibold transition-all ${isFollowing
+                                className={`px-8 py-3 rounded-full font-semibold transition-all ${followStatus === 'following'
                                     ? 'bg-white/20 backdrop-blur-sm text-white border-2 border-white hover:bg-white/30'
-                                    : 'bg-white text-[#764ba2] hover:bg-white/90'
+                                    : followStatus === 'pending'
+                                        ? 'bg-gray-400/30 backdrop-blur-sm text-white border-2 border-gray-300'
+                                        : 'bg-white text-[#764ba2] hover:bg-white/90'
                                     } ${followLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {followLoading
                                     ? 'Carregando...'
-                                    : isFollowing
+                                    : followStatus === 'following'
                                         ? 'Seguindo ✓'
-                                        : 'Seguir'
+                                        : followStatus === 'pending'
+                                            ? 'Solicitado ⏳'
+                                            : 'Seguir'
                                 }
                             </button>
                         )}
@@ -211,7 +225,20 @@ const UserProfile = () => {
             {/* User's Dreams */}
             <div className="mt-8">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Sonhos de {user.nome_usuario}</h3>
-                {userDreams.length === 0 ? (
+
+                {/* Protected Posts Message for Private Accounts */}
+                {user.privacidade_padrao === 2 && followStatus !== 'following' && !isOwnProfile ? (
+                    <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-8 text-center">
+                        <FaLock className="text-4xl text-gray-500 mx-auto mb-4" />
+                        <h4 className="text-xl font-bold text-white mb-2">Esses posts estão protegidos</h4>
+                        <p className="text-gray-400 mb-4">
+                            Somente seguidores aprovados podem ver os posts de @{user.nome_usuario}. Para solicitar acesso, clique em Seguir.
+                        </p>
+                        {followStatus === 'pending' && (
+                            <p className="text-amber-400 text-sm">Solicitação pendente de aprovação</p>
+                        )}
+                    </div>
+                ) : userDreams.length === 0 ? (
                     <div className="text-center py-8">
                         <p className="text-gray-500 dark:text-gray-400">Este usuário ainda não compartilhou sonhos públicos.</p>
                     </div>

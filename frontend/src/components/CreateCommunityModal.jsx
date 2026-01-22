@@ -24,7 +24,7 @@ const CreateCommunityModal = ({ isOpen, onClose, onCreate }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Validation could go here
-        onCreate({ name, description, image: imagePreview });
+        onCreate({ name, description, image: image });
         onClose();
         // Reset form
         setName('');

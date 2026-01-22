@@ -13,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id_usuario', 'nome_usuario', 'email', 'nome_completo', 'bio', 'avatar_url', 'data_nascimento', 'data_criacao', 'seguidores_count', 'seguindo_count', 'is_following', 'is_admin')
+        fields = ('id_usuario', 'nome_usuario', 'email', 'nome_completo', 'bio', 'avatar_url', 'data_nascimento', 'data_criacao', 'seguidores_count', 'seguindo_count', 'is_following', 'is_admin', 'privacidade_padrao')
 
     def get_avatar_url(self, obj):
         if obj.avatar_url:
@@ -64,13 +64,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile"""
     class Meta:
         model = User
-        fields = ('nome_completo', 'nome_usuario', 'bio', 'avatar_url', 'data_nascimento')
+        fields = ('nome_completo', 'nome_usuario', 'bio', 'avatar_url', 'data_nascimento', 'privacidade_padrao')
         extra_kwargs = {
             'nome_completo': {'required': False},
             'nome_usuario': {'required': False},
             'bio': {'required': False},
             'avatar_url': {'required': False},
             'data_nascimento': {'required': False},
+            'privacidade_padrao': {'required': False},
         }
 
 class LogoutSerializer(serializers.Serializer):
@@ -97,6 +98,7 @@ class PublicacaoSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()
     comentarios_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    is_saved = serializers.SerializerMethodField()
     
     class Meta:
         model = Publicacao
@@ -104,7 +106,7 @@ class PublicacaoSerializer(serializers.ModelSerializer):
             'id_publicacao', 'usuario', 'titulo', 'conteudo_texto',
             'data_sonho', 'tipo_sonho', 'visibilidade', 'emocoes_sentidas', 'imagem',
             'data_publicacao', 'editado', 'data_edicao', 'views_count',
-            'likes_count', 'comentarios_count', 'is_liked'
+            'likes_count', 'comentarios_count', 'is_liked', 'is_saved'
         )
         read_only_fields = ('id_publicacao', 'usuario', 'data_publicacao', 'editado', 'data_edicao', 'views_count')
 
@@ -126,6 +128,16 @@ class PublicacaoSerializer(serializers.ModelSerializer):
             ).exists()
         return False
 
+    def get_is_saved(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from .models import PublicacaoSalva
+            return PublicacaoSalva.objects.filter(
+                publicacao=obj,
+                usuario=request.user
+            ).exists()
+        return False
+
 
 class PublicacaoCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating dream posts"""
@@ -133,7 +145,7 @@ class PublicacaoCreateSerializer(serializers.ModelSerializer):
         model = Publicacao
         fields = (
             'titulo', 'conteudo_texto', 'data_sonho', 'tipo_sonho',
-            'visibilidade', 'emocoes_sentidas', 'localizacao', 'imagem'
+            'visibilidade', 'emocoes_sentidas', 'localizacao', 'imagem', 'comunidade'
         )
         extra_kwargs = {
             'titulo': {'required': False},
@@ -143,6 +155,7 @@ class PublicacaoCreateSerializer(serializers.ModelSerializer):
             'emocoes_sentidas': {'required': False},
             'localizacao': {'required': False},
             'imagem': {'required': False},
+            'comunidade': {'required': False},
         }
 
 
@@ -256,6 +269,29 @@ class CloseFriendSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(user.avatar_url)
             return user.avatar_url
         return None
+
+# Comunidade Serializers
+from .models import Comunidade
+
+class ComunidadeSerializer(serializers.ModelSerializer):
+    """Serializer for communities"""
+    membros_count = serializers.SerializerMethodField()
+    is_member = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comunidade
+        fields = ('id_comunidade', 'nome', 'descricao', 'imagem', 'data_criacao', 'membros_count', 'is_member')
+        read_only_fields = ('id_comunidade', 'data_criacao', 'membros_count', 'is_member')
+
+    def get_membros_count(self, obj):
+        return obj.membros.count()
+
+    def get_is_member(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.membros.filter(id_usuario=request.user.id_usuario).exists()
+        return False
+
 
 
 

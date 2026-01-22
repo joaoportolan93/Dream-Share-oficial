@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaMoon, FaImage, FaSmile, FaGlobeAmericas, FaUserFriends } from 'react-icons/fa';
 import { createDream, updateDream, getProfile } from '../services/api';
 
-const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null }) => {
+const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, communityId = null }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [user, setUser] = useState(null);
     const [content, setContent] = useState('');
-    const [visibility, setVisibility] = useState(1);
+    const [visibility, setVisibility] = useState(1); // Default Public
     const [showVisibilityMenu, setShowVisibilityMenu] = useState(false);
     const [dreamType, setDreamType] = useState('');
     const [showTypeMenu, setShowTypeMenu] = useState(false);
@@ -65,6 +65,7 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null }) =
         if (dreamType) formData.append('tipo_sonho', dreamType);
         if (emotions.length > 0) formData.append('emocoes_sentidas', emotions.join(', '));
         if (selectedImage) formData.append('imagem', selectedImage);
+        if (communityId) formData.append('comunidade', communityId);
 
         try {
             if (editingDream) {

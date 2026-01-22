@@ -115,7 +115,15 @@ const ExplorePage = () => {
                         {/* New Post Placeholder */}
                         <div className="bg-white dark:bg-cosmic-card border border-border dark:border-white/10 rounded-xl p-4 flex items-center gap-4 hover:border-primary/30 dark:hover:border-cosmic-accent/50 transition-all cursor-text shadow-card dark:shadow-soft">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 overflow-hidden">
-                                <img src="https://i.pravatar.cc/150?img=12" alt="Avatar" className="w-full h-full object-cover" />
+                                {localStorage.getItem('user') ? (
+                                    <img
+                                        src={JSON.parse(localStorage.getItem('user')).avatar_url || 'https://randomuser.me/api/portraits/lego/1.jpg'}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-300 dark:bg-gray-700"></div>
+                                )}
                             </div>
                             <span className="text-text-secondary dark:text-cosmic-text-muted text-lg font-medium">Compartilhe, veja sonhos...</span>
                         </div>

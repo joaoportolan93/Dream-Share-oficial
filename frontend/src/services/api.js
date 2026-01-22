@@ -61,6 +61,8 @@ export const getUser = (userId) => api.get(`/api/users/${userId}/`);
 
 export const updateUser = (userId, data) => api.put(`/api/users/${userId}/`, data);
 
+export const patchUser = (userId, data) => api.patch(`/api/users/${userId}/`, data);
+
 export const uploadAvatar = (file) => {
     const formData = new FormData();
     formData.append('avatar', file);
@@ -72,7 +74,13 @@ export const uploadAvatar = (file) => {
 };
 
 // Dreams (Publicacao) endpoints
-export const getDreams = (tab = 'following') => api.get(`/api/dreams/?tab=${tab}`);
+export const getDreams = (tab = 'following', communityId = null) => {
+    let url = `/api/dreams/?tab=${tab}`;
+    if (communityId) {
+        url += `&community_id=${communityId}`;
+    }
+    return api.get(url);
+};
 
 export const getMyDreams = () => api.get('/api/dreams/?tab=mine');
 
@@ -85,6 +93,8 @@ export const updateDream = (id, data) => api.put(`/api/dreams/${id}/`, data);
 export const deleteDream = (id) => api.delete(`/api/dreams/${id}/`);
 
 export const likeDream = (id) => api.post(`/api/dreams/${id}/like/`);
+
+export const saveDream = (id) => api.post(`/api/dreams/${id}/save/`);
 
 // Follow endpoints
 export const followUser = (userId) => api.post(`/api/users/${userId}/follow/`);
@@ -118,6 +128,20 @@ export const updateUserSettings = (data) => api.patch('/api/settings/', data);
 export const getCloseFriendsManage = () => api.get('/api/friends/manage/');
 
 export const toggleCloseFriend = (userId) => api.post(`/api/friends/toggle/${userId}/`);
+
+// Follow Requests endpoints
+export const getFollowRequests = () => api.get('/api/follow-requests/');
+
+export const acceptFollowRequest = (userId) => api.post(`/api/follow-requests/${userId}/action/`, { action: 'accept' });
+
+
+export const rejectFollowRequest = (userId) => api.post(`/api/follow-requests/${userId}/action/`, { action: 'reject' });
+
+// Community endpoints
+export const getCommunities = () => api.get('/api/communities/');
+export const createCommunity = (data) => api.post('/api/communities/', data);
+export const getCommunity = (id) => api.get(`/api/communities/${id}/`);
+export const joinCommunity = (id) => api.post(`/api/communities/${id}/join/`);
 
 export default api;
 

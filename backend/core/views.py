@@ -104,6 +104,25 @@ class UserDetailView(APIView):
         serializer = UserSerializer(user, context={'request': request})
         data = serializer.data
         
+        # Add follow_status for the requesting user
+        if request.user.id_usuario != pk:
+            from .models import Seguidor
+            follow = Seguidor.objects.filter(
+                usuario_seguidor=request.user,
+                usuario_seguido=user
+            ).first()
+            if follow:
+                if follow.status == 1:
+                    data['follow_status'] = 'following'
+                elif follow.status == 3:
+                    data['follow_status'] = 'pending'
+                else:
+                    data['follow_status'] = 'none'
+            else:
+                data['follow_status'] = 'none'
+        else:
+            data['follow_status'] = None  # Own profile
+        
         # Add ban info if user is banned
         if user.status == 2:
             # Try to find the most recent resolved report against this user
@@ -142,6 +161,9 @@ class UserDetailView(APIView):
             serializer.save()
             return Response(UserSerializer(user, context={'request': request}).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        return self.put(request, pk)
 
 class LogoutView(APIView):
     """Logout by blacklisting the refresh token"""
@@ -237,8 +259,8 @@ class SuggestedUsersView(APIView):
 # Dream (Publicacao) Views
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from .models import Publicacao, Seguidor, ReacaoPublicacao, Comentario, Hashtag, PublicacaoHashtag
-from .serializers import PublicacaoSerializer, PublicacaoCreateSerializer, SeguidorSerializer, HashtagSerializer, SearchSerializer
+from .models import Publicacao, Seguidor, ReacaoPublicacao, Comentario, Hashtag, PublicacaoHashtag, PublicacaoSalva
+from .serializers import PublicacaoSerializer, PublicacaoCreateSerializer, SeguidorSerializer, HashtagSerializer, SearchSerializer, NotificacaoSerializer
 from django.utils import timezone
 from django.db.models import Count, Q
 
@@ -274,7 +296,22 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
                 return Publicacao.objects.filter(
                     usuario=user
                 ).order_by('-data_publicacao')
+
+            if tab == 'saved':
+                # Saved Dreams: Posts saved by the user
+                return Publicacao.objects.filter(
+                    base_filter,
+                    publicacaosalva__usuario=user
+                ).order_by('-publicacaosalva__data_salvo')
             
+            if tab == 'community':
+                community_id = self.request.query_params.get('community_id')
+                if community_id:
+                    return Publicacao.objects.filter(
+                        base_filter,
+                        comunidade_id=community_id
+                    ).order_by('-data_publicacao')
+
             if tab == 'foryou':
                 # For You: Public dreams ordered by engagement (likes + comments)
                 return Publicacao.objects.filter(
@@ -374,6 +411,32 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
             'likes_count': likes_count
         }, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='save')
+    def save_post(self, request, pk=None):
+        """Toggle save on a dream post"""
+        dream = self.get_object()
+        existing_save = PublicacaoSalva.objects.filter(
+            publicacao=dream,
+            usuario=request.user
+        ).first()
+
+        if existing_save:
+            existing_save.delete()
+            is_saved = False
+            message = 'Post removido dos salvos'
+        else:
+            PublicacaoSalva.objects.create(
+                publicacao=dream,
+                usuario=request.user
+            )
+            is_saved = True
+            message = 'Post salvo com sucesso'
+
+        return Response({
+            'is_saved': is_saved,
+            'message': message
+        }, status=status.HTTP_200_OK)
+
 
 class FollowView(APIView):
     """Views for following/unfollowing users"""
@@ -390,7 +453,7 @@ class FollowView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check if already following
+        # Check if already following or pending
         existing = Seguidor.objects.filter(
             usuario_seguidor=request.user,
             usuario_seguido=user_to_follow
@@ -402,15 +465,50 @@ class FollowView(APIView):
                     {'error': 'Você já está seguindo este usuário'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            # Reactivate if was blocked/inactive
-            existing.status = 1
-            existing.save()
+            if existing.status == 3:
+                return Response(
+                    {'error': 'Solicitação já enviada', 'follow_status': 'pending'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # Reactivate if was blocked/inactive - check privacy
+            if user_to_follow.privacidade_padrao == 2:
+                existing.status = 3  # Pending for private accounts
+                existing.data_seguimento = timezone.now()
+                existing.save()
+                return Response({
+                    'message': f'Solicitação enviada para {user_to_follow.nome_usuario}',
+                    'follow_status': 'pending'
+                }, status=status.HTTP_200_OK)
+            else:
+                existing.status = 1
+                existing.save()
         else:
-            Seguidor.objects.create(
-                usuario_seguidor=request.user,
-                usuario_seguido=user_to_follow,
-                status=1
-            )
+            # Determine status based on target's privacy setting
+            if user_to_follow.privacidade_padrao == 2:
+                # Private account: create pending follow request
+                Seguidor.objects.create(
+                    usuario_seguidor=request.user,
+                    usuario_seguido=user_to_follow,
+                    status=3  # Pendente
+                )
+                # Create notification for follow request (tipo 5 = Solicitação de Seguidor)
+                from .views import create_notification
+                create_notification(
+                    usuario_destino=user_to_follow,
+                    usuario_origem=request.user,
+                    tipo=5  # New type for follow request
+                )
+                return Response({
+                    'message': f'Solicitação enviada para {user_to_follow.nome_usuario}',
+                    'follow_status': 'pending'
+                }, status=status.HTTP_200_OK)
+            else:
+                # Public account: follow immediately
+                Seguidor.objects.create(
+                    usuario_seguidor=request.user,
+                    usuario_seguido=user_to_follow,
+                    status=1
+                )
         
         # Create notification for new follower (tipo 4 = Seguidor Novo)
         from .views import create_notification
@@ -422,17 +520,17 @@ class FollowView(APIView):
         
         return Response({
             'message': f'Você agora está seguindo {user_to_follow.nome_usuario}',
-            'is_following': True
+            'follow_status': 'following'
         }, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
-        """Unfollow a user"""
+        """Unfollow a user or cancel pending request"""
         user_to_unfollow = get_object_or_404(User, pk=pk)
         
         follow = Seguidor.objects.filter(
             usuario_seguidor=request.user,
             usuario_seguido=user_to_unfollow,
-            status=1
+            status__in=[1, 3]  # Active or Pending
         ).first()
         
         if not follow:
@@ -441,13 +539,87 @@ class FollowView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        was_pending = follow.status == 3
         follow.delete()
         
         return Response({
-            'message': f'Você deixou de seguir {user_to_unfollow.nome_usuario}',
-            'is_following': False
+            'message': f'Você deixou de seguir {user_to_unfollow.nome_usuario}' if not was_pending else 'Solicitação cancelada',
+            'follow_status': 'none'
         }, status=status.HTTP_200_OK)
 
+
+class FollowRequestsView(APIView):
+    """Get pending follow requests for the current user"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        pending_requests = Seguidor.objects.filter(
+            usuario_seguido=request.user,
+            status=3  # Pendente
+        ).order_by('-data_seguimento')
+        
+        data = []
+        for req in pending_requests:
+            user = req.usuario_seguidor
+            data.append({
+                'id_usuario': user.id_usuario,
+                'nome_usuario': user.nome_usuario,
+                'nome_completo': user.nome_completo,
+                'avatar_url': request.build_absolute_uri(user.avatar_url) if user.avatar_url else None,
+                'data_solicitacao': req.data_seguimento.isoformat(),
+            })
+        
+        return Response(data)
+
+
+class FollowRequestActionView(APIView):
+    """Accept or reject a pending follow request"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, pk):
+        action = request.data.get('action')  # 'accept' or 'reject'
+        
+        # Find the pending follow request
+        follow_request = Seguidor.objects.filter(
+            usuario_seguidor_id=pk,
+            usuario_seguido=request.user,
+            status=3  # Pendente
+        ).first()
+        
+        if not follow_request:
+            return Response(
+                {'error': 'Solicitação não encontrada'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if action == 'accept':
+            follow_request.status = 1  # Ativo
+            follow_request.save()
+            
+            # Create notification for follower that request was accepted
+            create_notification(
+                usuario_destino=follow_request.usuario_seguidor,
+                usuario_origem=request.user,
+                tipo=4,  # Seguidor Novo (they are now following)
+                conteudo='aceitou sua solicitação de seguir'
+            )
+            
+            return Response({
+                'message': 'Solicitação aceita',
+                'status': 'accepted'
+            }, status=status.HTTP_200_OK)
+        
+        elif action == 'reject':
+            follow_request.delete()
+            return Response({
+                'message': 'Solicitação recusada',
+                'status': 'rejected'
+            }, status=status.HTTP_200_OK)
+        
+        return Response(
+            {'error': 'Ação inválida. Use "accept" ou "reject"'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 # Comments ViewSet
 from .serializers import ComentarioSerializer, ComentarioCreateSerializer
@@ -946,3 +1118,45 @@ class ToggleCloseFriendView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+
+# ==========================================
+# COMMUNITIES VIEWS
+# ==========================================
+
+from .models import Comunidade
+from .serializers import ComunidadeSerializer
+
+class ComunidadeViewSet(viewsets.ModelViewSet):
+    """ViewSet for communities CRUD operations"""
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = ComunidadeSerializer
+    queryset = Comunidade.objects.all().order_by('-data_criacao')
+    
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+    def perform_create(self, serializer):
+        # Create community and add creator as member
+        comunidade = serializer.save()
+        comunidade.membros.add(self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def join(self, request, pk=None):
+        """Join or leave a community"""
+        comunidade = self.get_object()
+        user = request.user
+        
+        if comunidade.membros.filter(id_usuario=user.id_usuario).exists():
+            comunidade.membros.remove(user)
+            is_member = False
+            message = 'Você saiu da comunidade'
+        else:
+            comunidade.membros.add(user)
+            is_member = True
+            message = 'Você entrou na comunidade'
+            
+        return Response({
+            'is_member': is_member,
+            'message': message,
+            'membros_count': comunidade.membros.count()
+        }, status=status.HTTP_200_OK)

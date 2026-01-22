@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag } from 'react-icons/fa';
-import { deleteDream, likeDream } from '../services/api';
+import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag, FaBookmark, FaRegBookmark } from 'react-icons/fa';
+import { deleteDream, likeDream, saveDream } from '../services/api';
 import { AnimatePresence } from 'framer-motion';
 import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
@@ -15,6 +15,8 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
     const [showComments, setShowComments] = useState(false);
     const [commentsCount, setCommentsCount] = useState(dream.comentarios_count || 0);
     const [showReportModal, setShowReportModal] = useState(false);
+    const [saved, setSaved] = useState(dream.is_saved || false);
+    const [saving, setSaving] = useState(false);
 
     const isOwner = dream.usuario?.id_usuario === currentUserId;
 
@@ -59,6 +61,24 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
         }
     };
 
+    const handleSave = async () => {
+        if (saving) return;
+
+        const wasSaved = saved;
+        setSaved(!wasSaved);
+        setSaving(true);
+
+        try {
+            const response = await saveDream(dream.id_publicacao);
+            setSaved(response.data.is_saved);
+        } catch (err) {
+            console.error('Error toggling save:', err);
+            setSaved(wasSaved);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleDelete = async () => {
         if (!window.confirm('Tem certeza que deseja excluir este sonho?')) return;
         setDeleting(true);
@@ -80,8 +100,20 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
         'Recorrente': 'bg-yellow-500',
     };
 
+    const borderClass = dream.visibilidade === 2
+        ? 'border-green-500/50'
+        : 'border-gray-200 dark:border-white/10';
+
     return (
-        <div className={`bg-white dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-card dark:shadow-none hover:bg-gray-50 dark:hover:bg-white/10 transition-colors ${dream.visibilidade === 2 ? 'border border-green-500/30' : ''}`}>
+        <div className={`
+            relative group
+            bg-white dark:bg-[#1a163a]/95 backdrop-blur-xl
+            rounded-2xl p-6
+            shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-none
+            border ${borderClass}
+            hover:shadow-lg hover:border-primary/30 hover:-translate-y-1
+            transition-all duration-300 ease-out
+        `}>
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -89,12 +121,12 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                         <img
                             src={dream.usuario?.avatar_url || 'https://randomuser.me/api/portraits/lego/1.jpg'}
                             alt={dream.usuario?.nome_completo}
-                            className="w-12 h-12 rounded-full object-cover"
+                            className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-white/10"
                         />
                     </Link>
                     <div>
                         <div className="flex items-center gap-2">
-                            <Link to={`/user/${dream.usuario?.id_usuario}`} className="font-semibold text-gray-900 dark:text-white hover:text-primary transition-colors">
+                            <Link to={`/user/${dream.usuario?.id_usuario}`} className="font-semibold text-gray-900 dark:text-gray-100 hover:text-primary transition-colors">
                                 {dream.usuario?.nome_completo}
                             </Link>
                             {dream.visibilidade === 2 && (
@@ -113,7 +145,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                 <div className="relative">
                     <button
                         onClick={() => setShowMenu(!showMenu)}
-                        className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                     >
                         <FaEllipsisH className="text-gray-500 dark:text-gray-400" />
                     </button>
@@ -123,14 +155,14 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                                 <>
                                     <button
                                         onClick={() => { onEdit?.(dream); setShowMenu(false); }}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                                     >
                                         <FaEdit /> Editar
                                     </button>
                                     <button
                                         onClick={handleDelete}
                                         disabled={deleting}
-                                        className="w-full flex items-center gap-2 px-4 py-3 text-red-400 hover:bg-white/10 transition-colors"
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                     >
                                         <FaTrash /> {deleting ? 'Excluindo...' : 'Excluir'}
                                     </button>
@@ -139,7 +171,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                             {!isOwner && (
                                 <button
                                     onClick={() => { setShowReportModal(true); setShowMenu(false); }}
-                                    className="w-full flex items-center gap-2 px-4 py-3 text-orange-400 hover:bg-white/10 transition-colors"
+                                    className="w-full flex items-center gap-2 px-4 py-3 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
                                 >
                                     <FaFlag /> Denunciar
                                 </button>
@@ -158,17 +190,17 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
 
             {/* Title */}
             {dream.titulo && (
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{dream.titulo}</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{dream.titulo}</h3>
             )}
 
             {/* Content */}
-            <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
+            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
                 {dream.conteudo_texto}
             </p>
 
             {/* Image */}
             {dream.imagem && (
-                <div className="mb-4 rounded-xl overflow-hidden">
+                <div className="mb-4 rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
                     <img src={dream.imagem} alt="Dream visual" className="w-full h-auto max-h-[500px] object-cover" />
                 </div>
             )}
@@ -178,7 +210,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
             {dream.emocoes_sentidas && (
                 <div className="flex flex-wrap gap-2 mb-4">
                     {dream.emocoes_sentidas.split(',').map((emocao, index) => (
-                        <span key={index} className="px-3 py-1 bg-gray-100 dark:bg-white/10 rounded-full text-sm text-gray-600 dark:text-gray-300">
+                        <span key={index} className="px-3 py-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full text-sm text-gray-600 dark:text-gray-300">
                             {emocao.trim()}
                         </span>
                     ))}
@@ -190,20 +222,28 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                 <button
                     onClick={handleLike}
                     disabled={liking}
-                    className={`flex items-center gap-2 transition-colors ${liked ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}`}
+                    className={`flex items-center gap-2 transition-colors ${liked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'}`}
                 >
-                    {liked ? <FaHeart className="text-red-400" /> : <FaRegHeart />}
-                    <span className="text-sm">{likesCount}</span>
+                    {liked ? <FaHeart className="text-red-500" /> : <FaRegHeart />}
+                    <span className="text-sm font-medium">{likesCount}</span>
                 </button>
                 <button
                     onClick={() => setShowComments(!showComments)}
-                    className={`flex items-center gap-2 transition-colors ${showComments ? 'text-primary' : 'text-gray-400 hover:text-primary'}`}
+                    className={`flex items-center gap-2 transition-colors ${showComments ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}
                 >
                     <FaComment />
-                    <span className="text-sm">{commentsCount}</span>
+                    <span className="text-sm font-medium">{commentsCount}</span>
                 </button>
-                <button className="flex items-center gap-2 text-gray-400 hover:text-primary transition-colors">
+                <button className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
                     <FaShare />
+                </button>
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className={`flex items-center gap-2 transition-colors ml-auto ${saved ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}
+                    title={saved ? "Remover dos salvos" : "Salvar"}
+                >
+                    {saved ? <FaBookmark /> : <FaRegBookmark />}
                 </button>
             </div>
 

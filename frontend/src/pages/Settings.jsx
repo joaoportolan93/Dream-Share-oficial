@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaCog, FaBell, FaLock, FaPalette, FaUser, FaSave, FaArrowLeft, FaShieldAlt, FaStar, FaSearch, FaUserFriends } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { getProfile, getUserSettings, updateUserSettings, getCloseFriendsManage, toggleCloseFriend } from '../services/api';
+import { getProfile, getUserSettings, updateUserSettings, getCloseFriendsManage, toggleCloseFriend, patchUser } from '../services/api';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -149,6 +149,29 @@ const Settings = () => {
         }
     };
 
+    // Handle Privacy Toggle
+    const handlePrivacyChange = async () => {
+        if (!currentUser) return;
+
+        const isPrivate = currentUser.privacidade_padrao === 2;
+        const newStatus = isPrivate ? 1 : 2; // 1 = Public, 2 = Private
+
+        // Optimistic update
+        setCurrentUser(prev => ({ ...prev, privacidade_padrao: newStatus }));
+
+        try {
+            await patchUser(currentUser.id_usuario, { privacidade_padrao: newStatus });
+            setSuccess(`Visibilidade alterada para ${newStatus === 2 ? 'Privada' : 'Pública'}`);
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            console.error('Error updating privacy:', err);
+            setError('Erro ao alterar privacidade');
+            // Revert
+            setCurrentUser(prev => ({ ...prev, privacidade_padrao: isPrivate ? 2 : 1 }));
+            setTimeout(() => setError(''), 3000);
+        }
+    };
+
     // Filter followers by search query
     const filteredFollowers = followers.filter(f =>
         f.nome_usuario.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -273,6 +296,17 @@ const Settings = () => {
                             <FaLock className="text-primary" />
                             Privacidade
                         </h2>
+
+                        <SettingRow
+                            icon={FaLock}
+                            label="Conta Privada"
+                            description="Quando sua conta é privada, apenas pessoas que você aprovar podem ver seus sonhos e perfil."
+                        >
+                            <ToggleSwitch
+                                enabled={currentUser?.privacidade_padrao === 2}
+                                onToggle={handlePrivacyChange}
+                            />
+                        </SettingRow>
 
                         <SettingRow icon={FaUser} label="Mostrar visualizações" description="Exibir contagem de visualizações nos seus sonhos">
                             <ToggleSwitch enabled={settings.mostrar_visualizacoes} onToggle={() => handleToggle('mostrar_visualizacoes')} />
