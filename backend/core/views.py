@@ -1174,6 +1174,13 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         return {'request': self.request}
 
+    def get_queryset(self):
+        """Filter communities - can filter to only show member communities"""
+        queryset = Comunidade.objects.all().order_by('-data_criacao')
+        if self.request.query_params.get('member') == 'true':
+            queryset = queryset.filter(membros=self.request.user)
+        return queryset
+
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):
         """Join a community"""
@@ -1263,3 +1270,22 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         serializer = CommunityStatsSerializer(data=data)
         serializer.is_valid()
         return Response(serializer.data)
+
+
+# Rascunho (Draft) ViewSet
+from .models import Rascunho
+from .serializers import RascunhoSerializer
+
+class RascunhoViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing user's post drafts"""
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = RascunhoSerializer
+
+    def get_queryset(self):
+        """Return only the current user's drafts"""
+        return Rascunho.objects.filter(usuario=self.request.user)
+
+    def perform_create(self, serializer):
+        """Automatically set the current user as the draft owner"""
+        serializer.save(usuario=self.request.user)
+

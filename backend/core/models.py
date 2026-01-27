@@ -419,3 +419,30 @@ class MembroComunidade(models.Model):
 def create_user_settings(sender, instance, created, **kwargs):
     if created:
         ConfiguracaoUsuario.objects.get_or_create(usuario=instance)
+
+
+class Rascunho(models.Model):
+    """Draft model for saving post drafts before publishing"""
+    id_rascunho = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', related_name='rascunhos')
+    comunidade = models.ForeignKey('Comunidade', on_delete=models.SET_NULL, null=True, blank=True, db_column='id_comunidade')
+    titulo = models.CharField(max_length=300, null=True, blank=True)
+    conteudo_texto = models.TextField(blank=True, default='')
+    
+    TIPO_POST_CHOICES = (
+        ('texto', 'Texto'),
+        ('multimidia', 'Multimídia'),
+        ('link', 'Link'),
+    )
+    tipo_post = models.CharField(max_length=20, choices=TIPO_POST_CHOICES, default='texto')
+    imagem = models.ImageField(upload_to='drafts/', null=True, blank=True)
+    tags = models.JSONField(default=list, blank=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'rascunhos'
+        ordering = ['-data_atualizacao']
+
+    def __str__(self):
+        return f"Rascunho de {self.usuario.username} - {self.titulo or 'Sem título'}"

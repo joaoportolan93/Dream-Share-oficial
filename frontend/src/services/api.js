@@ -139,12 +139,21 @@ export const rejectFollowRequest = (userId) => api.post(`/api/follow-requests/${
 
 // Community endpoints
 export const getCommunities = () => api.get('/api/communities/');
+export const getUserCommunities = () => api.get('/api/communities/?member=true');
 export const createCommunity = (data) => api.post('/api/communities/', data);
 export const getCommunity = (id) => api.get(`/api/communities/${id}/`);
 export const joinCommunity = (id) => api.post(`/api/communities/${id}/join/`);
 export const getCommunityStats = (id) => api.get(`/api/communities/${id}/moderator_stats/`);
 
+// Drafts endpoints
+export const getDrafts = () => api.get('/api/drafts/');
+export const getDraft = (id) => api.get(`/api/drafts/${id}/`);
+export const createDraft = (data) => api.post('/api/drafts/', data);
+export const updateDraft = (id, data) => api.patch(`/api/drafts/${id}/`, data);
+export const deleteDraft = (id) => api.delete(`/api/drafts/${id}/`);
+
 export default api;
+
 
 
 

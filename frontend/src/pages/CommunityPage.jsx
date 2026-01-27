@@ -129,7 +129,7 @@ const CommunityPage = () => {
                             <div className="flex gap-2 items-center relative">
                                 {/* Create Post Button */}
                                 <button
-                                    onClick={() => navigate('/create-post')}
+                                    onClick={() => navigate(`/community/${id}/submit`)}
                                     className="px-4 py-2 rounded-full font-bold bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white transition-colors flex items-center gap-2"
                                 >
                                     <FaPlus />

@@ -338,6 +338,26 @@ class CommunityStatsSerializer(serializers.Serializer):
     pending_reports = serializers.IntegerField()
 
 
+# Rascunho (Draft) Serializer
+from .models import Rascunho
 
-
+class RascunhoSerializer(serializers.ModelSerializer):
+    """Serializer for post drafts"""
+    comunidade_nome = serializers.CharField(source='comunidade.nome', read_only=True)
+    
+    class Meta:
+        model = Rascunho
+        fields = (
+            'id_rascunho', 'comunidade', 'comunidade_nome', 'titulo', 
+            'conteudo_texto', 'tipo_post', 'imagem', 'tags',
+            'data_criacao', 'data_atualizacao'
+        )
+        read_only_fields = ('id_rascunho', 'data_criacao', 'data_atualizacao', 'comunidade_nome')
+        extra_kwargs = {
+            'comunidade': {'required': False},
+            'titulo': {'required': False},
+            'conteudo_texto': {'required': False},
+            'imagem': {'required': False},
+            'tags': {'required': False},
+        }
 
