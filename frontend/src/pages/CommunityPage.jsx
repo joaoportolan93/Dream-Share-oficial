@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DreamCard from '../components/DreamCard';
-import { getCommunity, joinCommunity, getDreams } from '../services/api';
-import { FaBirthdayCake, FaEllipsisH, FaChevronDown, FaPlus, FaPen, FaEnvelope, FaUserPlus } from 'react-icons/fa';
+import { getCommunity, joinCommunity, leaveCommunity, deleteCommunity, getDreams } from '../services/api';
+import { FaBirthdayCake, FaEllipsisH, FaChevronDown, FaPlus, FaPen, FaEnvelope, FaUserPlus, FaTrash } from 'react-icons/fa';
 
 const CommunityPage = () => {
     const { id } = useParams();
@@ -36,16 +36,35 @@ const CommunityPage = () => {
         loadData();
     }, [id]);
 
-    const handleJoin = async () => {
+    const handleJoinLeave = async () => {
         try {
-            const response = await joinCommunity(id);
+            // Use the correct endpoint based on current membership status
+            const response = community.is_member 
+                ? await leaveCommunity(id)
+                : await joinCommunity(id);
             setCommunity(prev => ({
                 ...prev,
                 is_member: response.data.is_member,
                 membros_count: response.data.membros_count
             }));
         } catch (err) {
-            console.error('Error joining community:', err);
+            console.error('Error joining/leaving community:', err);
+            // Show error message to user
+            alert(err.response?.data?.error || 'Erro ao processar solicitação');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm('Tem certeza que deseja excluir esta comunidade? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+        try {
+            await deleteCommunity(id);
+            alert('Comunidade excluída com sucesso!');
+            navigate('/communities');
+        } catch (err) {
+            console.error('Error deleting community:', err);
+            alert(err.response?.data?.error || 'Erro ao excluir comunidade');
         }
     };
 
@@ -149,7 +168,7 @@ const CommunityPage = () => {
                                     <div className="absolute top-12 right-0 bg-white dark:bg-[#1a1a1b] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-2 w-48 z-50">
                                         <button
                                             onClick={() => {
-                                                handleJoin();
+                                                handleJoinLeave();
                                                 setShowMenu(false);
                                             }}
                                             className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-200 text-sm"
@@ -167,12 +186,26 @@ const CommunityPage = () => {
                                                 <button className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/10 text-red-500 text-sm">
                                                     Denunciar
                                                 </button>
-                                                <button
-                                                    onClick={() => navigate(`/community/${id}/mod-dashboard`)}
-                                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/10 text-blue-500 font-bold text-sm"
-                                                >
-                                                    FERRAMENTAS DE MODERAÇÃO
-                                                </button>
+                                                {(community.is_moderator || community.is_admin) && (
+                                                    <button
+                                                        onClick={() => navigate(`/community/${id}/mod-dashboard`)}
+                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/10 text-blue-500 font-bold text-sm"
+                                                    >
+                                                        FERRAMENTAS DE MODERAÇÃO
+                                                    </button>
+                                                )}
+                                                {community.is_admin && (
+                                                    <button
+                                                        onClick={() => {
+                                                            handleDelete();
+                                                            setShowMenu(false);
+                                                        }}
+                                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/10 text-red-600 font-bold text-sm flex items-center gap-2"
+                                                    >
+                                                        <FaTrash size={12} />
+                                                        EXCLUIR COMUNIDADE
+                                                    </button>
+                                                )}
                                             </>
                                         )}
                                     </div>

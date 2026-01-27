@@ -278,12 +278,14 @@ class ComunidadeSerializer(serializers.ModelSerializer):
     membros_count = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
     is_moderator = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
     moderators = serializers.SerializerMethodField()
 
     class Meta:
         model = Comunidade
-        fields = ('id_comunidade', 'nome', 'descricao', 'imagem', 'regras', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'moderators')
-        read_only_fields = ('id_comunidade', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'moderators')
+        fields = ('id_comunidade', 'nome', 'descricao', 'imagem', 'regras', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'is_admin', 'user_role', 'moderators')
+        read_only_fields = ('id_comunidade', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'is_admin', 'user_role', 'moderators')
 
     def get_membros_count(self, obj):
         return obj.membros.count()
@@ -297,7 +299,6 @@ class ComunidadeSerializer(serializers.ModelSerializer):
     def get_is_moderator(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            # Avoid circular import if MembroComunidade is not available globally
             from .models import MembroComunidade
             return MembroComunidade.objects.filter(
                 comunidade=obj, 
@@ -305,6 +306,30 @@ class ComunidadeSerializer(serializers.ModelSerializer):
                 role__in=['moderator', 'admin']
             ).exists()
         return False
+
+    def get_is_admin(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from .models import MembroComunidade
+            return MembroComunidade.objects.filter(
+                comunidade=obj, 
+                usuario=request.user, 
+                role='admin'
+            ).exists()
+        return False
+
+    def get_user_role(self, obj):
+        """Returns the current user's role in this community"""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from .models import MembroComunidade
+            membership = MembroComunidade.objects.filter(
+                comunidade=obj, 
+                usuario=request.user
+            ).first()
+            if membership:
+                return membership.role
+        return None
 
     def get_moderators(self, obj):
         from .models import MembroComunidade
@@ -316,8 +341,9 @@ class ComunidadeSerializer(serializers.ModelSerializer):
         return [
             {
                 'id': mod.usuario.id_usuario,
-                'username': mod.usuario.username,
-                'avatar': mod.usuario.avatar.url if mod.usuario.avatar else None
+                'username': mod.usuario.nome_usuario,
+                'role': mod.role,
+                'avatar': mod.usuario.avatar_url if mod.usuario.avatar_url else None
             }
             for mod in mods
         ]
