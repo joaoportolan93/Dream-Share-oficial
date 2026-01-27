@@ -88,6 +88,7 @@ class Seguidor(models.Model):
     STATUS_CHOICES = (
         (1, 'Ativo'),
         (2, 'Bloqueado'),
+        (3, 'Pendente'),
     )
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=1)
     is_close_friend = models.BooleanField(default=False)
@@ -106,6 +107,7 @@ class Publicacao(models.Model):
     data_publicacao = models.DateTimeField(default=timezone.now)
     editado = models.BooleanField(default=False)
     data_edicao = models.DateTimeField(null=True, blank=True)
+    comunidade = models.ForeignKey('Comunidade', on_delete=models.SET_NULL, null=True, blank=True, related_name='publicacoes', db_column='id_comunidade')
     
     VISIBILIDADE_CHOICES = (
         (1, 'Público'),
@@ -193,6 +195,16 @@ class ReacaoPublicacao(models.Model):
         db_table = 'reacoes_publicacoes'
         unique_together = ('publicacao', 'usuario')
 
+class PublicacaoSalva(models.Model):
+    id_salvo = models.AutoField(primary_key=True)
+    publicacao = models.ForeignKey(Publicacao, on_delete=models.CASCADE, db_column='id_publicacao')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    data_salvo = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'publicacoes_salvas'
+        unique_together = ('publicacao', 'usuario')
+
 class ReacaoComentario(models.Model):
     id_reacao = models.AutoField(primary_key=True)
     comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, db_column='id_comentario')
@@ -241,6 +253,7 @@ class Notificacao(models.Model):
         (2, 'Comentário'),
         (3, 'Curtida'),
         (4, 'Seguidor Novo'),
+        (5, 'Solicitação de Seguidor'),
     )
     tipo_notificacao = models.SmallIntegerField(choices=TIPO_NOTIFICACAO_CHOICES)
     id_referencia = models.IntegerField(null=True, blank=True)
@@ -358,6 +371,48 @@ class ConfiguracaoUsuario(models.Model):
     class Meta:
         db_table = 'configuracoes_usuario'
 
+
+
+
+class Comunidade(models.Model):
+    id_comunidade = models.AutoField(primary_key=True)
+    nome = models.CharField(max_length=100, unique=True)
+    descricao = models.TextField()
+    imagem = models.ImageField(upload_to='community_images/', null=True, blank=True)
+    regras = models.JSONField(default=list, blank=True)
+    membros = models.ManyToManyField(Usuario, through='MembroComunidade', related_name='comunidades', blank=True)
+    data_criacao = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'comunidades'
+
+    def __str__(self):
+        return self.nome
+
+class MembroComunidade(models.Model):
+    id_membro = models.AutoField(primary_key=True)
+    comunidade = models.ForeignKey(Comunidade, on_delete=models.CASCADE, db_column='id_comunidade')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    data_entrada = models.DateTimeField(default=timezone.now)
+    
+    ROLE_CHOICES = (
+        ('member', 'Membro'),
+        ('moderator', 'Moderador'),
+        ('admin', 'Administrador'),
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    is_moderator = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'membros_comunidade'
+        unique_together = ('comunidade', 'usuario')
+
+    def save(self, *args, **kwargs):
+        if self.role in ['moderator', 'admin']:
+            self.is_moderator = True
+        else:
+            self.is_moderator = False
+        super().save(*args, **kwargs)
 
 # Signal to auto-create ConfiguracaoUsuario when a new Usuario is created
 @receiver(post_save, sender=Usuario)

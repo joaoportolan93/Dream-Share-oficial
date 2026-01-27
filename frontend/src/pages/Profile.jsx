@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake, FaMoon } from 'react-icons/fa';
-import { getProfile, getMyDreams } from '../services/api';
+import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake, FaMoon, FaLock } from 'react-icons/fa';
+import { getProfile, getMyDreams, getDreams } from '../services/api';
 import DreamCard from '../components/DreamCard';
 
 const Profile = () => {
@@ -10,6 +10,25 @@ const Profile = () => {
     const [loading, setLoading] = useState(true);
     const [dreams, setDreams] = useState([]);
     const [dreamsLoading, setDreamsLoading] = useState(true);
+    const [savedDreams, setSavedDreams] = useState([]);
+    const [savedLoading, setSavedLoading] = useState(false);
+
+    useEffect(() => {
+        if (activeTab === 'saved' && savedDreams.length === 0) {
+            const fetchSaved = async () => {
+                setSavedLoading(true);
+                try {
+                    const res = await getDreams('saved');
+                    setSavedDreams(res.data);
+                } catch (error) {
+                    console.error('Error fetching saved dreams:', error);
+                } finally {
+                    setSavedLoading(false);
+                }
+            };
+            fetchSaved();
+        }
+    }, [activeTab]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -80,8 +99,9 @@ const Profile = () => {
                     />
 
                     <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
-                        <h1 className="text-3xl font-bold mb-2">
+                        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
                             {user?.nome_completo || 'Usuário'}
+                            {user?.privacidade_padrao === 2 && <FaLock className="text-2xl opacity-80" title="Conta Privada" />}
                         </h1>
                         <h2 className="text-lg mb-4 opacity-90">
                             @{user?.nome_usuario || 'username'}
@@ -91,6 +111,12 @@ const Profile = () => {
                         </p>
 
                         <div className="flex gap-6 flex-wrap mb-4 justify-center md:justify-start">
+                            {user?.privacidade_padrao === 2 && (
+                                <div className="flex items-center gap-2 text-sm bg-black/20 px-3 py-1 rounded-full">
+                                    <FaLock className="text-xs" />
+                                    <span>Conta Privada</span>
+                                </div>
+                            )}
                             <div className="flex items-center gap-2 text-sm">
                                 <FaCalendarAlt className="opacity-90" />
                                 <span>{formatDate(user?.data_criacao, 'join')}</span>
@@ -219,14 +245,32 @@ const Profile = () => {
 
                 {/* Saved Tab Content */}
                 {activeTab === 'saved' && (
-                    <div className="text-center py-12">
-                        <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-                            Nenhum sonho salvo ainda.
-                        </p>
-                        <p className="text-gray-400 dark:text-gray-500">
-                            Salve sonhos interessantes para encontrá-los facilmente aqui!
-                        </p>
-                    </div>
+                    <>
+                        {savedLoading ? (
+                            <div className="flex justify-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                            </div>
+                        ) : savedDreams.length > 0 ? (
+                            <div className="flex flex-col gap-4">
+                                {savedDreams.map(dream => (
+                                    <DreamCard
+                                        key={dream.id_publicacao}
+                                        dream={{ ...dream, is_saved: true }} // Ensure is_saved is true for visual feedback
+                                        currentUserId={user?.id_usuario}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+                                    Nenhum sonho salvo ainda.
+                                </p>
+                                <p className="text-gray-400 dark:text-gray-500">
+                                    Salve sonhos interessantes para encontrá-los facilmente aqui!
+                                </p>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>

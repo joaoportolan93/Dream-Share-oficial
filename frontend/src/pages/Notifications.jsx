@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { FaBell, FaHeart, FaComment, FaUserPlus, FaCheck, FaArrowLeft } from 'react-icons/fa';
+import { FaBell, FaHeart, FaComment, FaUserPlus, FaCheck, FaArrowLeft, FaTimes } from 'react-icons/fa';
 import { useNavigate, Link } from 'react-router-dom';
-import { getNotifications, markAllNotificationsRead } from '../services/api';
+import { getNotifications, markAllNotificationsRead, getFollowRequests, acceptFollowRequest, rejectFollowRequest } from '../services/api';
 
 const Notifications = () => {
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [followRequests, setFollowRequests] = useState([]);
+    const [requestsLoading, setRequestsLoading] = useState(true);
 
     useEffect(() => {
         fetchNotifications();
+        fetchFollowRequests();
     }, []);
 
     const fetchNotifications = async () => {
@@ -24,6 +27,36 @@ const Notifications = () => {
             setError('Erro ao carregar notificações');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchFollowRequests = async () => {
+        setRequestsLoading(true);
+        try {
+            const response = await getFollowRequests();
+            setFollowRequests(response.data);
+        } catch (err) {
+            console.error('Error fetching follow requests:', err);
+        } finally {
+            setRequestsLoading(false);
+        }
+    };
+
+    const handleAcceptRequest = async (userId) => {
+        try {
+            await acceptFollowRequest(userId);
+            setFollowRequests(prev => prev.filter(r => r.id_usuario !== userId));
+        } catch (err) {
+            console.error('Error accepting request:', err);
+        }
+    };
+
+    const handleRejectRequest = async (userId) => {
+        try {
+            await rejectFollowRequest(userId);
+            setFollowRequests(prev => prev.filter(r => r.id_usuario !== userId));
+        } catch (err) {
+            console.error('Error rejecting request:', err);
         }
     };
 
@@ -112,6 +145,54 @@ const Notifications = () => {
                     </button>
                 )}
             </div>
+
+            {/* Follow Requests Section */}
+            {followRequests.length > 0 && (
+                <div className="bg-white dark:bg-white/5 shadow-card dark:shadow-none backdrop-blur-sm rounded-2xl p-4 mb-6 border border-white/10">
+                    <div className="flex items-center gap-2 mb-4">
+                        <FaUserPlus className="text-primary" />
+                        <h2 className="font-semibold text-gray-900 dark:text-white">
+                            Solicitações de seguidores
+                        </h2>
+                        <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                            {followRequests.length}
+                        </span>
+                    </div>
+                    <div className="space-y-3">
+                        {followRequests.map(request => (
+                            <div key={request.id_usuario} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                <Link to={`/user/${request.id_usuario}`} className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center overflow-hidden">
+                                        {request.avatar_url ? (
+                                            <img src={request.avatar_url} alt={request.nome_usuario} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-white font-bold text-lg">{request.nome_usuario.charAt(0).toUpperCase()}</span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-white">{request.nome_completo}</p>
+                                        <p className="text-sm text-gray-400">@{request.nome_usuario}</p>
+                                    </div>
+                                </Link>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleRejectRequest(request.id_usuario)}
+                                        className="px-4 py-2 border border-red-500 text-red-500 rounded-lg hover:bg-red-500/10 transition-colors"
+                                    >
+                                        Recusar
+                                    </button>
+                                    <button
+                                        onClick={() => handleAcceptRequest(request.id_usuario)}
+                                        className="px-4 py-2 border border-green-500 text-green-500 rounded-lg hover:bg-green-500/10 transition-colors"
+                                    >
+                                        Aceitar
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Loading */}
             {loading && (

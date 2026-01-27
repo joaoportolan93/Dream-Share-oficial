@@ -6,13 +6,15 @@ from .views import (
     AvatarUploadView, PublicacaoViewSet, FollowView, SuggestedUsersView, 
     ComentarioViewSet, NotificacaoViewSet, SearchView, CustomTokenObtainPairView,
     AdminStatsView, AdminUsersView, AdminUserDetailView, AdminReportsView, AdminReportActionView,
-    CreateReportView, UserSettingsView, CloseFriendsManagerView, ToggleCloseFriendView
+    CreateReportView, UserSettingsView, CloseFriendsManagerView, ToggleCloseFriendView,
+    FollowRequestsView, FollowRequestActionView, ComunidadeViewSet
 )
 
 # Router for ViewSets
 router = DefaultRouter()
 router.register(r'dreams', PublicacaoViewSet, basename='dreams')
 router.register(r'notifications', NotificacaoViewSet, basename='notifications')
+router.register(r'communities', ComunidadeViewSet, basename='communities')
 
 # Nested router for comments
 comments_list = ComentarioViewSet.as_view({'get': 'list', 'post': 'create'})
@@ -34,6 +36,10 @@ urlpatterns = [
     
     # Follow endpoints
     path('users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
+    
+    # Follow requests endpoints
+    path('follow-requests/', FollowRequestsView.as_view(), name='follow-requests'),
+    path('follow-requests/<int:pk>/action/', FollowRequestActionView.as_view(), name='follow-request-action'),
     
     # Comments endpoints (nested under dreams)
     path('dreams/<int:dream_pk>/comments/', comments_list, name='dream-comments-list'),
