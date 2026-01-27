@@ -277,11 +277,13 @@ class ComunidadeSerializer(serializers.ModelSerializer):
     """Serializer for communities"""
     membros_count = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
+    is_moderator = serializers.SerializerMethodField()
+    moderators = serializers.SerializerMethodField()
 
     class Meta:
         model = Comunidade
-        fields = ('id_comunidade', 'nome', 'descricao', 'imagem', 'data_criacao', 'membros_count', 'is_member')
-        read_only_fields = ('id_comunidade', 'data_criacao', 'membros_count', 'is_member')
+        fields = ('id_comunidade', 'nome', 'descricao', 'imagem', 'regras', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'moderators')
+        read_only_fields = ('id_comunidade', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'moderators')
 
     def get_membros_count(self, obj):
         return obj.membros.count()
@@ -291,6 +293,49 @@ class ComunidadeSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.membros.filter(id_usuario=request.user.id_usuario).exists()
         return False
+
+    def get_is_moderator(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            # Avoid circular import if MembroComunidade is not available globally
+            from .models import MembroComunidade
+            return MembroComunidade.objects.filter(
+                comunidade=obj, 
+                usuario=request.user, 
+                role__in=['moderator', 'admin']
+            ).exists()
+        return False
+
+    def get_moderators(self, obj):
+        from .models import MembroComunidade
+        mods = MembroComunidade.objects.filter(
+            comunidade=obj,
+            role__in=['moderator', 'admin']
+        ).select_related('usuario')
+        
+        return [
+            {
+                'id': mod.usuario.id_usuario,
+                'username': mod.usuario.username,
+                'avatar': mod.usuario.avatar.url if mod.usuario.avatar else None
+            }
+            for mod in mods
+        ]
+
+class CommunityStatsSerializer(serializers.Serializer):
+    """Serializer for community moderator insights"""
+    # Growth
+    total_members = serializers.IntegerField()
+    new_members_last_7_days = serializers.IntegerField()
+    new_members_last_30_days = serializers.IntegerField()
+    
+    # Engagement
+    total_posts = serializers.IntegerField()
+    posts_last_7_days = serializers.IntegerField()
+    active_members_last_7_days = serializers.IntegerField()
+    
+    # Queer/Reports
+    pending_reports = serializers.IntegerField()
 
 
 

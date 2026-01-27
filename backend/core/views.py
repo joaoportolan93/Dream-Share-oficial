@@ -1160,3 +1160,106 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
             'message': message,
             'membros_count': comunidade.membros.count()
         }, status=status.HTTP_200_OK)
+
+# Comunidade Views
+from .models import Comunidade, MembroComunidade
+from .serializers import ComunidadeSerializer, CommunityStatsSerializer
+
+class ComunidadeViewSet(viewsets.ModelViewSet):
+    """ViewSet for communities"""
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = ComunidadeSerializer
+    queryset = Comunidade.objects.all()
+
+    def get_serializer_context(self):
+        return {'request': self.request}
+
+    @action(detail=True, methods=['post'])
+    def join(self, request, pk=None):
+        """Join a community"""
+        community = self.get_object()
+        user = request.user
+        
+        # Check if already member
+        if MembroComunidade.objects.filter(comunidade=community, usuario=user).exists():
+            return Response({'error': 'Você já é membro desta comunidade'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        MembroComunidade.objects.create(comunidade=community, usuario=user)
+        return Response({
+            'message': 'Bem-vindo à comunidade!',
+            'is_member': True,
+            'membros_count': community.membros.count()
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def leave(self, request, pk=None):
+        """Leave a community"""
+        community = self.get_object()
+        user = request.user
+        
+        membership = MembroComunidade.objects.filter(comunidade=community, usuario=user).first()
+        if not membership:
+             return Response({'error': 'Você não é membro desta comunidade'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        membership.delete()
+        return Response({
+            'message': 'Você saiu da comunidade',
+            'is_member': False,
+            'membros_count': community.membros.count()
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'])
+    def moderator_stats(self, request, pk=None):
+        """Get community statistics (Moderators only)"""
+        community = self.get_object()
+        user = request.user
+
+        # Check permission (Owner or Moderator)
+        # For now, simplistic: if user is admin OR is a moderator of the community
+        # Since 'owner' isn't on Comunidade model directly yet (maybe created by?), we check MembroComunidade role
+        is_mod = MembroComunidade.objects.filter(
+            comunidade=community, 
+            usuario=user,
+            role__in=['moderator', 'admin']
+        ).exists()
+
+        if not is_mod and not user.is_admin:
+             return Response(
+                {'error': 'Apenas moderadores podem ver estatísticas'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Calculate Stats
+        today = timezone.now()
+        seven_days_ago = today - timedelta(days=7)
+        thirty_days_ago = today - timedelta(days=30)
+        
+        total_members = community.membros.count()
+        new_members_7 = MembroComunidade.objects.filter(comunidade=community, data_entrada__gte=seven_days_ago).count()
+        new_members_30 = MembroComunidade.objects.filter(comunidade=community, data_entrada__gte=thirty_days_ago).count()
+        
+        total_posts = community.publicacoes.count()
+        posts_7 = community.publicacoes.filter(data_publicacao__gte=seven_days_ago).count()
+        
+        # Active members: users who posted in last 7 days
+        active_members_7 = community.publicacoes.filter(
+            data_publicacao__gte=seven_days_ago
+        ).values('usuario').distinct().count()
+        
+        # Pending reports (Mock implementation until Reports are linked to Communities)
+        # Assuming Denuncia model can be linked to Community content
+        pending_reports = 0 
+
+        data = {
+            'total_members': total_members,
+            'new_members_last_7_days': new_members_7,
+            'new_members_last_30_days': new_members_30,
+            'total_posts': total_posts,
+            'posts_last_7_days': posts_7,
+            'active_members_last_7_days': active_members_7,
+            'pending_reports': pending_reports
+        }
+        
+        serializer = CommunityStatsSerializer(data=data)
+        serializer.is_valid()
+        return Response(serializer.data)

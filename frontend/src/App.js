@@ -17,6 +17,7 @@ import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import Communities from './pages/Communities';
 import CommunityPage from './pages/CommunityPage';
+import ModDashboard from './pages/ModDashboard';
 import Saved from './pages/Saved';
 import NotFound from './pages/NotFound';
 import UserProfile from './pages/UserProfile';
@@ -152,8 +153,18 @@ function App() {
                         path="/community/:id"
                         element={
                             <PrivateRoute>
-                                <Layout>
+                                <Layout hideRightSidebar>
                                     <CommunityPage />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/community/:id/mod-dashboard"
+                        element={
+                            <PrivateRoute>
+                                <Layout hideRightSidebar>
+                                    <ModDashboard />
                                 </Layout>
                             </PrivateRoute>
                         }

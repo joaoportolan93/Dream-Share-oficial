@@ -142,6 +142,7 @@ export const getCommunities = () => api.get('/api/communities/');
 export const createCommunity = (data) => api.post('/api/communities/', data);
 export const getCommunity = (id) => api.get(`/api/communities/${id}/`);
 export const joinCommunity = (id) => api.post(`/api/communities/${id}/join/`);
+export const getCommunityStats = (id) => api.get(`/api/communities/${id}/moderator_stats/`);
 
 export default api;
 

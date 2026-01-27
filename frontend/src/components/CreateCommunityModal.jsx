@@ -6,6 +6,7 @@ const CreateCommunityModal = ({ isOpen, onClose, onCreate }) => {
     const [description, setDescription] = useState('');
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
+    const [rules, setRules] = useState([]);
 
     if (!isOpen) return null;
 
@@ -21,16 +22,31 @@ const CreateCommunityModal = ({ isOpen, onClose, onCreate }) => {
         }
     };
 
+    const addRule = () => {
+        setRules([...rules, { title: '', description: '' }]);
+    };
+
+    const updateRule = (index, field, value) => {
+        const newRules = [...rules];
+        newRules[index][field] = value;
+        setRules(newRules);
+    };
+
+    const removeRule = (index) => {
+        setRules(rules.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         // Validation could go here
-        onCreate({ name, description, image: image });
+        onCreate({ name, description, image: image, regras: rules });
         onClose();
         // Reset form
         setName('');
         setDescription('');
         setImage(null);
         setImagePreview(null);
+        setRules([]);
     };
 
     return (
@@ -88,6 +104,45 @@ const CreateCommunityModal = ({ isOpen, onClose, onCreate }) => {
                                 placeholder="Descreva sua comunidade..."
                                 required
                             />
+                        </div>
+
+                        {/* Rules Section */}
+                        <div className="space-y-3">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Regras da Comunidade
+                            </label>
+                            {rules.map((rule, idx) => (
+                                <div key={idx} className="bg-gray-50 dark:bg-[#272729] p-3 rounded-lg border border-gray-200 dark:border-white/5 relative group">
+                                    <input
+                                        type="text"
+                                        placeholder="Título da Regra"
+                                        value={rule.title}
+                                        onChange={(e) => updateRule(idx, 'title', e.target.value)}
+                                        className="w-full bg-transparent font-bold text-sm text-gray-900 dark:text-white mb-1 outline-none placeholder-gray-400"
+                                    />
+                                    <textarea
+                                        placeholder="Descrição da regra..."
+                                        value={rule.description}
+                                        onChange={(e) => updateRule(idx, 'description', e.target.value)}
+                                        className="w-full bg-transparent text-xs text-gray-600 dark:text-gray-400 outline-none resize-none placeholder-gray-500"
+                                        rows={2}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeRule(idx)}
+                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-all"
+                                    >
+                                        <FaTimes size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={addRule}
+                                className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-500 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
+                            >
+                                + Adicionar Regra
+                            </button>
                         </div>
 
                         <div>

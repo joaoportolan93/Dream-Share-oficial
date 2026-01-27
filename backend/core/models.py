@@ -372,12 +372,15 @@ class ConfiguracaoUsuario(models.Model):
         db_table = 'configuracoes_usuario'
 
 
+
+
 class Comunidade(models.Model):
     id_comunidade = models.AutoField(primary_key=True)
     nome = models.CharField(max_length=100, unique=True)
     descricao = models.TextField()
     imagem = models.ImageField(upload_to='community_images/', null=True, blank=True)
-    membros = models.ManyToManyField(Usuario, related_name='comunidades', blank=True)
+    regras = models.JSONField(default=list, blank=True)
+    membros = models.ManyToManyField(Usuario, through='MembroComunidade', related_name='comunidades', blank=True)
     data_criacao = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -385,6 +388,31 @@ class Comunidade(models.Model):
 
     def __str__(self):
         return self.nome
+
+class MembroComunidade(models.Model):
+    id_membro = models.AutoField(primary_key=True)
+    comunidade = models.ForeignKey(Comunidade, on_delete=models.CASCADE, db_column='id_comunidade')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
+    data_entrada = models.DateTimeField(default=timezone.now)
+    
+    ROLE_CHOICES = (
+        ('member', 'Membro'),
+        ('moderator', 'Moderador'),
+        ('admin', 'Administrador'),
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    is_moderator = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'membros_comunidade'
+        unique_together = ('comunidade', 'usuario')
+
+    def save(self, *args, **kwargs):
+        if self.role in ['moderator', 'admin']:
+            self.is_moderator = True
+        else:
+            self.is_moderator = False
+        super().save(*args, **kwargs)
 
 # Signal to auto-create ConfiguracaoUsuario when a new Usuario is created
 @receiver(post_save, sender=Usuario)
