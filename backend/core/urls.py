@@ -7,7 +7,7 @@ from .views import (
     ComentarioViewSet, NotificacaoViewSet, SearchView, CustomTokenObtainPairView,
     AdminStatsView, AdminUsersView, AdminUserDetailView, AdminReportsView, AdminReportActionView,
     CreateReportView, UserSettingsView, CloseFriendsManagerView, ToggleCloseFriendView,
-    FollowRequestsView, FollowRequestActionView, ComunidadeViewSet
+    FollowRequestsView, FollowRequestActionView, ComunidadeViewSet, RascunhoViewSet
 )
 
 # Router for ViewSets
@@ -15,6 +15,8 @@ router = DefaultRouter()
 router.register(r'dreams', PublicacaoViewSet, basename='dreams')
 router.register(r'notifications', NotificacaoViewSet, basename='notifications')
 router.register(r'communities', ComunidadeViewSet, basename='communities')
+router.register(r'drafts', RascunhoViewSet, basename='drafts')
+
 
 # Nested router for comments
 comments_list = ComentarioViewSet.as_view({'get': 'list', 'post': 'create'})

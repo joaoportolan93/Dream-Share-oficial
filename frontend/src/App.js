@@ -22,6 +22,7 @@ import Saved from './pages/Saved';
 import NotFound from './pages/NotFound';
 import UserProfile from './pages/UserProfile';
 import SearchPage from './pages/SearchPage';
+import CreatePostPage from './pages/CreatePostPage';
 
 // Admin - Issue #29
 import AdminLayout from './layouts/AdminLayout';
@@ -166,6 +167,22 @@ function App() {
                                 <Layout hideRightSidebar>
                                     <ModDashboard />
                                 </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/create-post"
+                        element={
+                            <PrivateRoute>
+                                <CreatePostPage />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/community/:communityId/submit"
+                        element={
+                            <PrivateRoute>
+                                <CreatePostPage />
                             </PrivateRoute>
                         }
                     />
