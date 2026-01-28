@@ -36,6 +36,7 @@ const CreatePostPage = () => {
     const [error, setError] = useState('');
 
     const fileInputRef = useRef(null);
+    const textareaRef = useRef(null);
 
     const postTabs = [
         { id: 'texto', label: 'Texto', icon: FaFont, enabled: true },
@@ -44,6 +45,59 @@ const CreatePostPage = () => {
         { id: 'enquete', label: 'Enquete', icon: FaPoll, enabled: false },
         { id: 'ama', label: 'AMA', icon: FaQuestionCircle, enabled: false },
     ];
+
+    // Helper function to insert markdown syntax at cursor position
+    const insertMarkdown = (prefix, suffix = '', placeholder = '') => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = content.substring(start, end);
+        const textToInsert = selectedText || placeholder;
+        
+        const newContent = 
+            content.substring(0, start) + 
+            prefix + textToInsert + suffix + 
+            content.substring(end);
+        
+        setContent(newContent);
+        
+        // Set cursor position after insertion
+        setTimeout(() => {
+            textarea.focus();
+            const newCursorPos = start + prefix.length + textToInsert.length + suffix.length;
+            textarea.setSelectionRange(
+                selectedText ? newCursorPos : start + prefix.length,
+                selectedText ? newCursorPos : start + prefix.length + placeholder.length
+            );
+        }, 0);
+    };
+
+    // Toolbar button handlers
+    const handleBold = () => insertMarkdown('**', '**', 'texto em negrito');
+    const handleItalic = () => insertMarkdown('*', '*', 'texto em itálico');
+    const handleStrikethrough = () => insertMarkdown('~~', '~~', 'texto riscado');
+    const handleLink = () => {
+        const url = prompt('Digite a URL:');
+        if (url) {
+            insertMarkdown('[', `](${url})`, 'texto do link');
+        }
+    };
+    const handleUnorderedList = () => insertMarkdown('\n- ', '', 'item da lista');
+    const handleOrderedList = () => insertMarkdown('\n1. ', '', 'item da lista');
+    const handleQuote = () => insertMarkdown('\n> ', '', 'citação');
+    const handleCode = () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        const selectedText = content.substring(textarea.selectionStart, textarea.selectionEnd);
+        // Use code block for multiline, inline for single line
+        if (selectedText.includes('\n')) {
+            insertMarkdown('\n```\n', '\n```\n', 'código');
+        } else {
+            insertMarkdown('`', '`', 'código');
+        }
+    };
 
     // Load communities and drafts on mount
     useEffect(() => {
@@ -393,6 +447,7 @@ const CreatePostPage = () => {
                     {activeTab === 'texto' && (
                         <div className="p-4">
                             <textarea
+                                ref={textareaRef}
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 placeholder="Texto do post (opcional)"
@@ -401,15 +456,15 @@ const CreatePostPage = () => {
 
                             {/* Text Formatting Toolbar */}
                             <div className="flex items-center gap-1 pt-4 border-t border-gray-700/50 text-gray-500">
-                                <button className="p-2 hover:bg-white/5 rounded"><FaBold size={14} /></button>
-                                <button className="p-2 hover:bg-white/5 rounded"><FaItalic size={14} /></button>
-                                <button className="p-2 hover:bg-white/5 rounded"><FaStrikethrough size={14} /></button>
+                                <button onClick={handleBold} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Negrito (Ctrl+B)"><FaBold size={14} /></button>
+                                <button onClick={handleItalic} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Itálico (Ctrl+I)"><FaItalic size={14} /></button>
+                                <button onClick={handleStrikethrough} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Tachado"><FaStrikethrough size={14} /></button>
                                 <span className="w-px h-5 bg-gray-700 mx-1" />
-                                <button className="p-2 hover:bg-white/5 rounded"><FaLink size={14} /></button>
-                                <button className="p-2 hover:bg-white/5 rounded"><FaListUl size={14} /></button>
-                                <button className="p-2 hover:bg-white/5 rounded"><FaListOl size={14} /></button>
-                                <button className="p-2 hover:bg-white/5 rounded"><FaQuoteRight size={14} /></button>
-                                <button className="p-2 hover:bg-white/5 rounded"><FaCode size={14} /></button>
+                                <button onClick={handleLink} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Inserir Link"><FaLink size={14} /></button>
+                                <button onClick={handleUnorderedList} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Lista não ordenada"><FaListUl size={14} /></button>
+                                <button onClick={handleOrderedList} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Lista ordenada"><FaListOl size={14} /></button>
+                                <button onClick={handleQuote} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Citação"><FaQuoteRight size={14} /></button>
+                                <button onClick={handleCode} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Código"><FaCode size={14} /></button>
                             </div>
                         </div>
                     )}

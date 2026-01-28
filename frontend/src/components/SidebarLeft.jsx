@@ -11,6 +11,7 @@ const SidebarLeft = () => {
         { icon: FaMoon, label: 'Explorar', path: '/explore' },
         { icon: FaUserFriends, label: 'Comunidades', path: '/communities' },
         { icon: FaBookmark, label: 'Salvos', path: '/saved' },
+        { icon: FaStar, label: 'Destaques', path: '/highlights' },
     ];
 
     const trends = [

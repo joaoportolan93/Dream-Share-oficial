@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaBell, FaHeart, FaComment, FaUserPlus, FaCheck, FaArrowLeft, FaTimes } from 'react-icons/fa';
+import { FaBell, FaHeart, FaComment, FaUserPlus, FaCheck, FaArrowLeft } from 'react-icons/fa';
 import { useNavigate, Link } from 'react-router-dom';
 import { getNotifications, markAllNotificationsRead, getFollowRequests, acceptFollowRequest, rejectFollowRequest } from '../services/api';
 
@@ -147,7 +147,13 @@ const Notifications = () => {
             </div>
 
             {/* Follow Requests Section */}
-            {followRequests.length > 0 && (
+            {requestsLoading ? (
+                <div className="bg-white dark:bg-white/5 shadow-card dark:shadow-none backdrop-blur-sm rounded-2xl p-4 mb-6 border border-white/10">
+                    <div className="flex justify-center py-4">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            ) : followRequests.length > 0 && (
                 <div className="bg-white dark:bg-white/5 shadow-card dark:shadow-none backdrop-blur-sm rounded-2xl p-4 mb-6 border border-white/10">
                     <div className="flex items-center gap-2 mb-4">
                         <FaUserPlus className="text-primary" />

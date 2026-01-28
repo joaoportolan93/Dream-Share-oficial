@@ -5,6 +5,7 @@ import { deleteDream, likeDream, saveDream } from '../services/api';
 import { AnimatePresence } from 'framer-motion';
 import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
+import ReactMarkdown from 'react-markdown';
 
 const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
     const navigate = useNavigate();
@@ -14,7 +15,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
     const [deleting, setDeleting] = useState(false);
     const [liking, setLiking] = useState(false);
     const [showComments, setShowComments] = useState(false);
-    const [commentsCount, setCommentsCount] = useState(dream.comentarios_count || 0);
+    const [commentsCount] = useState(dream.comentarios_count || 0);
     const [showReportModal, setShowReportModal] = useState(false);
     const [saved, setSaved] = useState(dream.is_saved || false);
     const [saving, setSaving] = useState(false);
@@ -203,10 +204,35 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                     <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{dream.titulo}</h3>
                 )}
 
-                {/* Content */}
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
-                    {dream.conteudo_texto}
-                </p>
+                {/* Content - Markdown Rendered */}
+                <div className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-blockquote:my-2 prose-pre:my-2">
+                    <ReactMarkdown
+                        components={{
+                            // Custom link styling
+                            a: ({children, href, ...props}) => (
+                                <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                                    {children}
+                                </a>
+                            ),
+                            // Prevent h1-h6 from being too large
+                            h1: ({children, ...props}) => <h4 {...props} className="text-lg font-bold mt-2">{children}</h4>,
+                            h2: ({children, ...props}) => <h4 {...props} className="text-base font-bold mt-2">{children}</h4>,
+                            h3: ({children, ...props}) => <h5 {...props} className="text-sm font-bold mt-2">{children}</h5>,
+                            // Code block styling
+                            code: ({inline, children, ...props}) => (
+                                inline 
+                                    ? <code {...props} className="bg-gray-800 px-1 py-0.5 rounded text-sm text-pink-400">{children}</code>
+                                    : <code {...props} className="block bg-gray-800 p-3 rounded text-sm overflow-x-auto">{children}</code>
+                            ),
+                            // Blockquote styling
+                            blockquote: ({children, ...props}) => (
+                                <blockquote {...props} className="border-l-4 border-blue-500 pl-4 italic text-gray-400">{children}</blockquote>
+                            ),
+                        }}
+                    >
+                        {dream.conteudo_texto}
+                    </ReactMarkdown>
+                </div>
             </div>
 
             {/* Image */}

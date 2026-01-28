@@ -77,7 +77,8 @@ const Communities = () => {
                                         {community.descricao}
                                     </p>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs text-text-secondary dark:text-gray-500 font-medium">
+                                        <span className="flex items-center gap-1 text-xs text-text-secondary dark:text-gray-500 font-medium">
+                                            <FaUsers className="text-primary" />
                                             {community.membros_count} membros
                                         </span>
                                         <div className="flex gap-2">

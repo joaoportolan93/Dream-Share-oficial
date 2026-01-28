@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     FaFire,
     FaClock,
@@ -16,7 +17,19 @@ import {
 } from 'react-icons/fa';
 
 const ExplorePage = () => {
+    const navigate = useNavigate();
     const [activeFilter, setActiveFilter] = useState('trending');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [followingUsers, setFollowingUsers] = useState([]);
+
+    // Toggle follow state for a user
+    const toggleFollow = (userId) => {
+        setFollowingUsers(prev => 
+            prev.includes(userId) 
+                ? prev.filter(id => id !== userId)
+                : [...prev, userId]
+        );
+    };
 
     // Mock Data for Dream Cards
     const dreams = [
@@ -58,12 +71,27 @@ const ExplorePage = () => {
         }
     ];
 
+    // Filter dreams based on search query
+    const filteredDreams = dreams.filter(dream => 
+        dream.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        dream.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        dream.author.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     // Mock Data for Suggestions
     const suggestions = [
         { id: 1, name: "Astral Traveler", handle: "@astral_t", bio: "Explorando o multiverso onírico." },
         { id: 2, name: "Lucid Dreamer", handle: "@lucid_d", bio: "Mestre em controle de sonhos." },
         { id: 3, name: "Night Owl", handle: "@night_owl", bio: "Sonhos noturnos e visões." },
     ];
+
+    // Handle search submission
+    const handleSearch = (e) => {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+        }
+    };
 
     return (
         <div className="w-full min-h-screen bg-background-main dark:bg-cosmic-bg text-text-main dark:text-white p-4 font-sans transition-colors duration-300">
@@ -88,7 +116,38 @@ const ExplorePage = () => {
                         </div>
                     </div>
 
-                    {/* 2. Filters & Input */}
+                    {/* 2. Search Bar */}
+                    <form onSubmit={handleSearch} className="relative">
+                        <div className="flex items-center bg-white dark:bg-cosmic-card border border-border dark:border-white/10 rounded-xl overflow-hidden shadow-card hover:border-primary/30 dark:hover:border-cosmic-accent/50 transition-all">
+                            <div className="pl-4 text-gray-400">
+                                <FaSearch size={18} />
+                            </div>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Pesquisar sonhos, categorias, usuários..."
+                                className="flex-1 px-4 py-3 bg-transparent text-text-main dark:text-white placeholder-gray-500 focus:outline-none"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    className="px-3 text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                                >
+                                    ×
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                className="px-6 py-3 bg-primary dark:bg-cosmic-accent text-white font-semibold hover:opacity-90 transition-opacity"
+                            >
+                                Buscar
+                            </button>
+                        </div>
+                    </form>
+
+                    {/* 3. Filters & Input */}
                     <div className="space-y-6">
                         {/* Filter Pills */}
                         <div className="flex flex-wrap gap-4">
@@ -113,7 +172,10 @@ const ExplorePage = () => {
                         </div>
 
                         {/* New Post Placeholder */}
-                        <div className="bg-white dark:bg-cosmic-card border border-border dark:border-white/10 rounded-xl p-4 flex items-center gap-4 hover:border-primary/30 dark:hover:border-cosmic-accent/50 transition-all cursor-text shadow-card dark:shadow-soft">
+                        <div 
+                            onClick={() => navigate('/create')}
+                            className="bg-white dark:bg-cosmic-card border border-border dark:border-white/10 rounded-xl p-4 flex items-center gap-4 hover:border-primary/30 dark:hover:border-cosmic-accent/50 transition-all cursor-pointer shadow-card dark:shadow-soft"
+                        >
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 overflow-hidden">
                                 {localStorage.getItem('user') ? (
                                     <img
@@ -151,10 +213,22 @@ const ExplorePage = () => {
                             </button>
                         </div>
 
-                        {/* Dream Cards */}
-                        {dreams.map((dream) => (
+                        {/* Dream Cards - Using filtered dreams */}
+                        {filteredDreams.map((dream) => (
                             <DreamCard key={dream.id} data={dream} />
                         ))}
+                        
+                        {filteredDreams.length === 0 && searchQuery && (
+                            <div className="col-span-full text-center py-12 text-gray-500">
+                                <p className="text-lg">Nenhum sonho encontrado para "{searchQuery}"</p>
+                                <button 
+                                    onClick={() => setSearchQuery('')}
+                                    className="mt-4 text-primary dark:text-cosmic-accent hover:underline"
+                                >
+                                    Limpar pesquisa
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                 </div>
@@ -177,8 +251,25 @@ const ExplorePage = () => {
                                             <p className="text-xs text-text-secondary dark:text-cosmic-text-muted">{user.handle}</p>
                                         </div>
                                     </div>
-                                    <button className="text-xs font-bold px-3 py-1.5 rounded-full bg-cosmic-accent hover:bg-violet-600 transition-colors text-white shadow-glow">
-                                        Seguir
+                                    <button 
+                                        onClick={() => toggleFollow(user.id)}
+                                        className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-colors shadow-glow ${
+                                            followingUsers.includes(user.id)
+                                                ? 'bg-green-500 hover:bg-green-600 text-white'
+                                                : 'bg-cosmic-accent hover:bg-violet-600 text-white'
+                                        }`}
+                                    >
+                                        {followingUsers.includes(user.id) ? (
+                                            <>
+                                                <FaCheck size={10} />
+                                                Seguindo
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FaUserPlus size={10} />
+                                                Seguir
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             ))}
@@ -214,10 +305,10 @@ const ExplorePage = () => {
 
                     {/* Small Footer Links */}
                     <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-text-secondary/50 dark:text-white/20 px-2 text-center justify-center">
-                        <a href="#" className="hover:text-text-main dark:hover:text-white/50 transition-colors">Sobre</a>
-                        <a href="#" className="hover:text-text-main dark:hover:text-white/50 transition-colors">Privacidade</a>
-                        <a href="#" className="hover:text-text-main dark:hover:text-white/50 transition-colors">Termos</a>
-                        <a href="#" className="hover:text-text-main dark:hover:text-white/50 transition-colors">Ajuda</a>
+                        <button onClick={() => navigate('/about')} className="hover:text-text-main dark:hover:text-white/50 transition-colors">Sobre</button>
+                        <button onClick={() => navigate('/privacy')} className="hover:text-text-main dark:hover:text-white/50 transition-colors">Privacidade</button>
+                        <button onClick={() => navigate('/terms')} className="hover:text-text-main dark:hover:text-white/50 transition-colors">Termos</button>
+                        <button onClick={() => navigate('/help')} className="hover:text-text-main dark:hover:text-white/50 transition-colors">Ajuda</button>
                         <span>© 2025 DreamShare</span>
                     </div>
 
