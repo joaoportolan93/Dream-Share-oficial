@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag, FaBookmark, FaRegBookmark } from 'react-icons/fa';
 import { deleteDream, likeDream, saveDream } from '../services/api';
 import { AnimatePresence } from 'framer-motion';
@@ -7,6 +7,7 @@ import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
 
 const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
+    const navigate = useNavigate();
     const [liked, setLiked] = useState(dream.is_liked || false);
     const [likesCount, setLikesCount] = useState(dream.likes_count || 0);
     const [showMenu, setShowMenu] = useState(false);
@@ -181,22 +182,32 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                 </div>
             </div>
 
-            {/* Type Badge */}
-            {dream.tipo_sonho && (
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium text-white mb-3 ${tipoSonhoColors[dream.tipo_sonho] || 'bg-gray-500'}`}>
-                    {dream.tipo_sonho}
-                </span>
-            )}
+            {/* Clickable Content Area */}
+            <div
+                onClick={(e) => {
+                    // Don't navigate if clicking on interactive elements
+                    if (e.target.closest('a, button')) return;
+                    navigate(`/post/${dream.id_publicacao}`);
+                }}
+                className="cursor-pointer"
+            >
+                {/* Type Badge */}
+                {dream.tipo_sonho && (
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium text-white mb-3 ${tipoSonhoColors[dream.tipo_sonho] || 'bg-gray-500'}`}>
+                        {dream.tipo_sonho}
+                    </span>
+                )}
 
-            {/* Title */}
-            {dream.titulo && (
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{dream.titulo}</h3>
-            )}
+                {/* Title */}
+                {dream.titulo && (
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{dream.titulo}</h3>
+                )}
 
-            {/* Content */}
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
-                {dream.conteudo_texto}
-            </p>
+                {/* Content */}
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 whitespace-pre-wrap">
+                    {dream.conteudo_texto}
+                </p>
+            </div>
 
             {/* Image */}
             {dream.imagem && (
@@ -252,6 +263,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                     <CommentSection
                         dreamId={dream.id_publicacao}
                         currentUserId={currentUserId}
+                        postOwnerId={dream.usuario?.id_usuario}
                     />
                 )}
             </AnimatePresence>

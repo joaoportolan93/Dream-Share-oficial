@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake, FaMoon, FaLock } from 'react-icons/fa';
-import { getProfile, getMyDreams, getDreams } from '../services/api';
+import { getProfile, getMyDreams, getDreams, getMyCommunityPosts } from '../services/api';
 import DreamCard from '../components/DreamCard';
 
 const Profile = () => {
@@ -12,6 +12,8 @@ const Profile = () => {
     const [dreamsLoading, setDreamsLoading] = useState(true);
     const [savedDreams, setSavedDreams] = useState([]);
     const [savedLoading, setSavedLoading] = useState(false);
+    const [communityPosts, setCommunityPosts] = useState([]);
+    const [communityLoading, setCommunityLoading] = useState(false);
 
     useEffect(() => {
         if (activeTab === 'saved' && savedDreams.length === 0) {
@@ -27,6 +29,23 @@ const Profile = () => {
                 }
             };
             fetchSaved();
+        }
+    }, [activeTab]);
+
+    useEffect(() => {
+        if (activeTab === 'communities' && communityPosts.length === 0) {
+            const fetchCommunityPosts = async () => {
+                setCommunityLoading(true);
+                try {
+                    const res = await getMyCommunityPosts();
+                    setCommunityPosts(res.data);
+                } catch (error) {
+                    console.error('Error fetching community posts:', error);
+                } finally {
+                    setCommunityLoading(false);
+                }
+            };
+            fetchCommunityPosts();
         }
     }, [activeTab]);
 
@@ -174,13 +193,13 @@ const Profile = () => {
                         Sonhos
                     </button>
                     <button
-                        className={`px-6 py-4 text-base transition-colors ${activeTab === 'journal'
+                        className={`px-6 py-4 text-base transition-colors ${activeTab === 'communities'
                             ? 'border-b-4 border-purple-500 text-purple-400 font-semibold'
                             : 'text-gray-500 dark:text-gray-400 hover:text-purple-400'
                             }`}
-                        onClick={() => setActiveTab('journal')}
+                        onClick={() => setActiveTab('communities')}
                     >
-                        Diário
+                        Comunidades
                     </button>
                     <button
                         className={`px-6 py-4 text-base transition-colors ${activeTab === 'saved'
@@ -231,16 +250,35 @@ const Profile = () => {
                     </>
                 )}
 
-                {/* Journal Tab Content */}
-                {activeTab === 'journal' && (
-                    <div className="text-center py-12">
-                        <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-                            Seu diário está vazio.
-                        </p>
-                        <p className="text-gray-400 dark:text-gray-500">
-                            Em breve você poderá manter um diário de sonhos privado!
-                        </p>
-                    </div>
+                {/* Communities Tab Content */}
+                {activeTab === 'communities' && (
+                    <>
+                        {communityLoading ? (
+                            <div className="flex justify-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                            </div>
+                        ) : communityPosts.length > 0 ? (
+                            <div className="flex flex-col gap-4">
+                                {communityPosts.map(post => (
+                                    <DreamCard
+                                        key={post.id_publicacao}
+                                        dream={post}
+                                        currentUserId={user?.id_usuario}
+                                        onDelete={handleDeleteDream}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+                                    Nenhum post em comunidades ainda.
+                                </p>
+                                <p className="text-gray-400 dark:text-gray-500">
+                                    Participe de comunidades e crie posts para vê-los aqui!
+                                </p>
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {/* Saved Tab Content */}
