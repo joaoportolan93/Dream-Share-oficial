@@ -143,7 +143,11 @@ export const getUserCommunities = () => api.get('/api/communities/?member=true')
 export const createCommunity = (data) => api.post('/api/communities/', data);
 export const getCommunity = (id) => api.get(`/api/communities/${id}/`);
 export const joinCommunity = (id) => api.post(`/api/communities/${id}/join/`);
+export const leaveCommunity = (id) => api.post(`/api/communities/${id}/leave/`);
 export const getCommunityStats = (id) => api.get(`/api/communities/${id}/moderator_stats/`);
+export const getCommunityMembers = (id) => api.get(`/api/communities/${id}/members/`);
+export const manageCommunityRole = (id, userId, role) => api.post(`/api/communities/${id}/manage-role/`, { user_id: userId, role });
+export const deleteCommunity = (id) => api.delete(`/api/communities/${id}/`);
 
 // Drafts endpoints
 export const getDrafts = () => api.get('/api/drafts/');

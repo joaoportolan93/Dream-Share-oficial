@@ -69,7 +69,7 @@ const Home = () => {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Feed de Sonhos</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Feed dos Sonhos</h1>
                 <button
                     onClick={openCreateModal}
                     className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:opacity-90 transition-all"

@@ -1116,52 +1116,10 @@ class ToggleCloseFriendView(APIView):
             'is_close_friend': follow.is_close_friend,
             'message': 'Amigo próximo adicionado' if follow.is_close_friend else 'Amigo próximo removido'
         }, status=status.HTTP_200_OK)
-
-
-
 # ==========================================
 # COMMUNITIES VIEWS
 # ==========================================
 
-from .models import Comunidade
-from .serializers import ComunidadeSerializer
-
-class ComunidadeViewSet(viewsets.ModelViewSet):
-    """ViewSet for communities CRUD operations"""
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = ComunidadeSerializer
-    queryset = Comunidade.objects.all().order_by('-data_criacao')
-    
-    def get_serializer_context(self):
-        return {'request': self.request}
-
-    def perform_create(self, serializer):
-        # Create community and add creator as member
-        comunidade = serializer.save()
-        comunidade.membros.add(self.request.user)
-    
-    @action(detail=True, methods=['post'])
-    def join(self, request, pk=None):
-        """Join or leave a community"""
-        comunidade = self.get_object()
-        user = request.user
-        
-        if comunidade.membros.filter(id_usuario=user.id_usuario).exists():
-            comunidade.membros.remove(user)
-            is_member = False
-            message = 'Você saiu da comunidade'
-        else:
-            comunidade.membros.add(user)
-            is_member = True
-            message = 'Você entrou na comunidade'
-            
-        return Response({
-            'is_member': is_member,
-            'message': message,
-            'membros_count': comunidade.membros.count()
-        }, status=status.HTTP_200_OK)
-
-# Comunidade Views
 from .models import Comunidade, MembroComunidade
 from .serializers import ComunidadeSerializer, CommunityStatsSerializer
 
@@ -1181,6 +1139,34 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(membros=self.request.user)
         return queryset
 
+    def perform_create(self, serializer):
+        """Create community and add creator as ADMIN"""
+        comunidade = serializer.save()
+        # Add creator as admin of the community
+        MembroComunidade.objects.create(
+            comunidade=comunidade,
+            usuario=self.request.user,
+            role='admin'
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a community (Admins only)"""
+        community = self.get_object()
+        user = request.user
+        
+        # Check if current user is admin of this community
+        is_community_admin = MembroComunidade.objects.filter(
+            comunidade=community, 
+            usuario=user,
+            role='admin'
+        ).exists()
+        
+        if not is_community_admin and not user.is_admin:
+            return Response({'error': 'Apenas administradores podem excluir a comunidade'}, status=status.HTTP_403_FORBIDDEN)
+        
+        community.delete()
+        return Response({'message': 'Comunidade excluída com sucesso'}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):
         """Join a community"""
@@ -1191,7 +1177,7 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         if MembroComunidade.objects.filter(comunidade=community, usuario=user).exists():
             return Response({'error': 'Você já é membro desta comunidade'}, status=status.HTTP_400_BAD_REQUEST)
             
-        MembroComunidade.objects.create(comunidade=community, usuario=user)
+        MembroComunidade.objects.create(comunidade=community, usuario=user, role='member')
         return Response({
             'message': 'Bem-vindo à comunidade!',
             'is_member': True,
@@ -1208,12 +1194,87 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         if not membership:
              return Response({'error': 'Você não é membro desta comunidade'}, status=status.HTTP_400_BAD_REQUEST)
         
+        # Prevent last admin from leaving
+        if membership.role == 'admin':
+            admin_count = MembroComunidade.objects.filter(comunidade=community, role='admin').count()
+            if admin_count <= 1:
+                return Response({'error': 'Você é o único admin. Promova outro membro antes de sair.'}, status=status.HTTP_400_BAD_REQUEST)
+        
         membership.delete()
         return Response({
             'message': 'Você saiu da comunidade',
             'is_member': False,
             'membros_count': community.membros.count()
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='manage-role')
+    def manage_role(self, request, pk=None):
+        """Promote/demote a member (Admins only)"""
+        community = self.get_object()
+        user = request.user
+        
+        # Check if current user is admin
+        is_admin = MembroComunidade.objects.filter(
+            comunidade=community, 
+            usuario=user,
+            role='admin'
+        ).exists()
+        
+        if not is_admin and not user.is_admin:
+            return Response({'error': 'Apenas administradores podem gerenciar roles'}, status=status.HTTP_403_FORBIDDEN)
+        
+        target_user_id = request.data.get('user_id')
+        new_role = request.data.get('role')
+        
+        if not target_user_id or not new_role:
+            return Response({'error': 'Campos obrigatórios: user_id, role'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if new_role not in ['member', 'moderator', 'admin']:
+            return Response({'error': 'Role inválido. Use: member, moderator, admin'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        membership = MembroComunidade.objects.filter(
+            comunidade=community, 
+            usuario_id=target_user_id
+        ).first()
+        
+        if not membership:
+            return Response({'error': 'Usuário não é membro desta comunidade'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Prevent removing own admin role if last admin
+        if membership.usuario == user and membership.role == 'admin' and new_role != 'admin':
+            admin_count = MembroComunidade.objects.filter(comunidade=community, role='admin').count()
+            if admin_count <= 1:
+                return Response({'error': 'Você é o único admin. Promova outro membro antes de se rebaixar.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        membership.role = new_role
+        membership.save()
+        
+        role_names = {'member': 'Membro', 'moderator': 'Moderador', 'admin': 'Administrador'}
+        return Response({
+            'message': f'Usuário agora é {role_names.get(new_role)}',
+            'user_id': target_user_id,
+            'new_role': new_role
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'])
+    def members(self, request, pk=None):
+        """List all members of a community with their roles"""
+        community = self.get_object()
+        
+        memberships = MembroComunidade.objects.filter(
+            comunidade=community
+        ).select_related('usuario').order_by('-role', '-data_entrada')
+        
+        data = [{
+            'id_usuario': m.usuario.id_usuario,
+            'nome_usuario': m.usuario.nome_usuario,
+            'nome_completo': m.usuario.nome_completo,
+            'avatar_url': m.usuario.avatar_url,
+            'role': m.role,
+            'data_entrada': m.data_entrada.isoformat()
+        } for m in memberships]
+        
+        return Response(data)
 
     @action(detail=True, methods=['get'])
     def moderator_stats(self, request, pk=None):
@@ -1222,8 +1283,6 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         user = request.user
 
         # Check permission (Owner or Moderator)
-        # For now, simplistic: if user is admin OR is a moderator of the community
-        # Since 'owner' isn't on Comunidade model directly yet (maybe created by?), we check MembroComunidade role
         is_mod = MembroComunidade.objects.filter(
             comunidade=community, 
             usuario=user,
@@ -1253,8 +1312,6 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
             data_publicacao__gte=seven_days_ago
         ).values('usuario').distinct().count()
         
-        # Pending reports (Mock implementation until Reports are linked to Communities)
-        # Assuming Denuncia model can be linked to Community content
         pending_reports = 0 
 
         data = {
