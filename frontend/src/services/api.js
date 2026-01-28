@@ -84,6 +84,8 @@ export const getDreams = (tab = 'following', communityId = null) => {
 
 export const getMyDreams = () => api.get('/api/dreams/?tab=mine');
 
+export const getMyCommunityPosts = () => api.get('/api/dreams/?tab=my_community_posts');
+
 export const createDream = (data) => api.post('/api/dreams/', data);
 
 export const getDream = (id) => api.get(`/api/dreams/${id}/`);
@@ -106,9 +108,19 @@ export const getSuggestedUsers = () => api.get('/api/users/suggested/');
 // Comments endpoints
 export const getComments = (dreamId) => api.get(`/api/dreams/${dreamId}/comments/`);
 
-export const createComment = (dreamId, text) => api.post(`/api/dreams/${dreamId}/comments/`, { conteudo_texto: text });
+export const createComment = (dreamId, text, parentId = null) => api.post(`/api/dreams/${dreamId}/comments/`, {
+    conteudo_texto: text,
+    comentario_pai: parentId
+});
+
+export const editComment = (dreamId, commentId, text) => api.patch(`/api/dreams/${dreamId}/comments/${commentId}/`, {
+    conteudo_texto: text
+});
 
 export const deleteComment = (dreamId, commentId) => api.delete(`/api/dreams/${dreamId}/comments/${commentId}/`);
+
+export const likeComment = (dreamId, commentId) => api.post(`/api/dreams/${dreamId}/comments/${commentId}/like/`);
+
 
 // Notifications endpoints
 export const getNotifications = () => api.get('/api/notifications/');

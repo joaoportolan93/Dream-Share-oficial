@@ -23,6 +23,7 @@ import NotFound from './pages/NotFound';
 import UserProfile from './pages/UserProfile';
 import SearchPage from './pages/SearchPage';
 import CreatePostPage from './pages/CreatePostPage';
+import PostPage from './pages/PostPage';
 
 // Admin - Issue #29
 import AdminLayout from './layouts/AdminLayout';
@@ -136,6 +137,16 @@ function App() {
                             <PrivateRoute>
                                 <Layout>
                                     <UserProfile />
+                                </Layout>
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/post/:id"
+                        element={
+                            <PrivateRoute>
+                                <Layout hideRightSidebar>
+                                    <PostPage />
                                 </Layout>
                             </PrivateRoute>
                         }
