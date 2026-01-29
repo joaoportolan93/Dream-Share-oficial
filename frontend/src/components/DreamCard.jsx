@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag, FaBookmark, FaRegBookmark } from 'react-icons/fa';
 import { deleteDream, likeDream, saveDream } from '../services/api';
@@ -106,6 +106,29 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
         ? 'border-green-500/50'
         : 'border-gray-200 dark:border-white/10';
 
+    const markdownComponents = useMemo(() => ({
+        // Custom link styling
+        a: ({children, href, ...props}) => (
+            <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                {children}
+            </a>
+        ),
+        // Prevent h1-h6 from being too large
+        h1: ({children, ...props}) => <h4 {...props} className="text-lg font-bold mt-2">{children}</h4>,
+        h2: ({children, ...props}) => <h4 {...props} className="text-base font-bold mt-2">{children}</h4>,
+        h3: ({children, ...props}) => <h5 {...props} className="text-sm font-bold mt-2">{children}</h5>,
+        // Code block styling
+        code: ({inline, children, ...props}) => (
+            inline 
+                ? <code {...props} className="bg-gray-800 px-1 py-0.5 rounded text-sm text-pink-400">{children}</code>
+                : <code {...props} className="block bg-gray-800 p-3 rounded text-sm overflow-x-auto">{children}</code>
+        ),
+        // Blockquote styling
+        blockquote: ({children, ...props}) => (
+            <blockquote {...props} className="border-l-4 border-blue-500 pl-4 italic text-gray-400">{children}</blockquote>
+        ),
+    }), []);
+
     return (
         <div className={`
             relative group
@@ -206,30 +229,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
 
                 {/* Content - Markdown Rendered */}
                 <div className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-blockquote:my-2 prose-pre:my-2">
-                    <ReactMarkdown
-                        components={{
-                            // Custom link styling
-                            a: ({children, href, ...props}) => (
-                                <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                                    {children}
-                                </a>
-                            ),
-                            // Prevent h1-h6 from being too large
-                            h1: ({children, ...props}) => <h4 {...props} className="text-lg font-bold mt-2">{children}</h4>,
-                            h2: ({children, ...props}) => <h4 {...props} className="text-base font-bold mt-2">{children}</h4>,
-                            h3: ({children, ...props}) => <h5 {...props} className="text-sm font-bold mt-2">{children}</h5>,
-                            // Code block styling
-                            code: ({inline, children, ...props}) => (
-                                inline 
-                                    ? <code {...props} className="bg-gray-800 px-1 py-0.5 rounded text-sm text-pink-400">{children}</code>
-                                    : <code {...props} className="block bg-gray-800 p-3 rounded text-sm overflow-x-auto">{children}</code>
-                            ),
-                            // Blockquote styling
-                            blockquote: ({children, ...props}) => (
-                                <blockquote {...props} className="border-l-4 border-blue-500 pl-4 italic text-gray-400">{children}</blockquote>
-                            ),
-                        }}
-                    >
+                    <ReactMarkdown components={markdownComponents}>
                         {dream.conteudo_texto}
                     </ReactMarkdown>
                 </div>
