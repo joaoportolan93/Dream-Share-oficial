@@ -473,8 +473,8 @@ const CreatePostPage = () => {
 
                             {/* Text Formatting Toolbar */}
                             <div className="flex items-center gap-1 pt-4 border-t border-gray-700/50 text-gray-500">
-                                <button onClick={handleBold} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Negrito (Ctrl+B)"><FaBold size={14} /></button>
-                                <button onClick={handleItalic} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Itálico (Ctrl+I)"><FaItalic size={14} /></button>
+                                <button onClick={handleBold} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Negrito"><FaBold size={14} /></button>
+                                <button onClick={handleItalic} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Itálico"><FaItalic size={14} /></button>
                                 <button onClick={handleStrikethrough} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Tachado"><FaStrikethrough size={14} /></button>
                                 <span className="w-px h-5 bg-gray-700 mx-1" />
                                 <button onClick={handleLink} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Inserir Link"><FaLink size={14} /></button>
