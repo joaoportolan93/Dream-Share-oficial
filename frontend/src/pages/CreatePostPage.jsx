@@ -473,15 +473,15 @@ const CreatePostPage = () => {
 
                             {/* Text Formatting Toolbar */}
                             <div className="flex items-center gap-1 pt-4 border-t border-gray-700/50 text-gray-500">
-                                <button onClick={handleBold} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Negrito"><FaBold size={14} /></button>
-                                <button onClick={handleItalic} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Itálico"><FaItalic size={14} /></button>
-                                <button onClick={handleStrikethrough} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Tachado"><FaStrikethrough size={14} /></button>
+                                <button onClick={handleBold} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Negrito (Ctrl+B)" aria-label="Aplicar negrito ao texto"><FaBold size={14} /></button>
+                                <button onClick={handleItalic} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Itálico (Ctrl+I)" aria-label="Aplicar itálico ao texto"><FaItalic size={14} /></button>
+                                <button onClick={handleStrikethrough} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Tachado" aria-label="Aplicar tachado ao texto"><FaStrikethrough size={14} /></button>
                                 <span className="w-px h-5 bg-gray-700 mx-1" />
-                                <button onClick={handleLink} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Inserir Link"><FaLink size={14} /></button>
-                                <button onClick={handleUnorderedList} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Lista não ordenada"><FaListUl size={14} /></button>
-                                <button onClick={handleOrderedList} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Lista ordenada"><FaListOl size={14} /></button>
-                                <button onClick={handleQuote} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Citação"><FaQuoteRight size={14} /></button>
-                                <button onClick={handleCode} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Código"><FaCode size={14} /></button>
+                                <button onClick={handleLink} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Inserir Link" aria-label="Inserir link no texto"><FaLink size={14} /></button>
+                                <button onClick={handleUnorderedList} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Lista não ordenada" aria-label="Inserir lista não ordenada"><FaListUl size={14} /></button>
+                                <button onClick={handleOrderedList} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Lista ordenada" aria-label="Inserir lista ordenada"><FaListOl size={14} /></button>
+                                <button onClick={handleQuote} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Citação" aria-label="Inserir citação"><FaQuoteRight size={14} /></button>
+                                <button onClick={handleCode} className="p-2 hover:bg-white/5 hover:text-white rounded transition-colors" title="Código" aria-label="Inserir código"><FaCode size={14} /></button>
                             </div>
                         </div>
                     )}
