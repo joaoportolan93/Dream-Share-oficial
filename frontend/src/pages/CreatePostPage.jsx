@@ -80,9 +80,26 @@ const CreatePostPage = () => {
     const handleStrikethrough = () => insertMarkdown('~~', '~~', 'texto riscado');
     const handleLink = () => {
         const url = prompt('Digite a URL:');
-        if (url) {
-            insertMarkdown('[', `](${url})`, 'texto do link');
+        if (!url) {
+            return;
         }
+        const trimmedUrl = url.trim();
+        if (!trimmedUrl) {
+            return;
+        }
+        let safeHref;
+        try {
+            const parsed = new URL(trimmedUrl, window.location.origin);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                alert('Por favor, insira uma URL que comece com http:// ou https://');
+                return;
+            }
+            safeHref = parsed.href;
+        } catch (e) {
+            alert('Por favor, insira uma URL válida.');
+            return;
+        }
+        insertMarkdown('[', `](${safeHref})`, 'texto do link');
     };
     const handleUnorderedList = () => insertMarkdown('\n- ', '', 'item da lista');
     const handleOrderedList = () => insertMarkdown('\n1. ', '', 'item da lista');

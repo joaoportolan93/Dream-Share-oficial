@@ -22,13 +22,50 @@ const ExplorePage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [followingUsers, setFollowingUsers] = useState([]);
 
+    // Persist follow/unfollow action to the backend
+    const updateFollowStatusOnServer = async (userId, shouldFollow) => {
+        try {
+            const response = await fetch(`/api/users/${userId}/follow`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: shouldFollow ? 'follow' : 'unfollow'
+                })
+            });
+
+            if (!response.ok) {
+                // Backend rejected the update; log for debugging.
+                console.error('Failed to update follow status on server', {
+                    userId,
+                    shouldFollow,
+                    status: response.status
+                });
+            }
+        } catch (error) {
+            // Network or other error; keep UI state but log the issue.
+            console.error('Error updating follow status on server', {
+                userId,
+                shouldFollow,
+                error
+            });
+        }
+    };
+
     // Toggle follow state for a user
     const toggleFollow = (userId) => {
-        setFollowingUsers(prev => 
-            prev.includes(userId) 
+        setFollowingUsers(prev => {
+            const isCurrentlyFollowing = prev.includes(userId);
+            const updatedFollowing = isCurrentlyFollowing
                 ? prev.filter(id => id !== userId)
-                : [...prev, userId]
-        );
+                : [...prev, userId];
+
+            // Optimistically update UI and persist change to backend
+            updateFollowStatusOnServer(userId, !isCurrentlyFollowing);
+
+            return updatedFollowing;
+        });
     };
 
     // Mock Data for Dream Cards
