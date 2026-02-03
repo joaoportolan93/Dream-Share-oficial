@@ -228,9 +228,9 @@ const Notifications = () => {
                         </div>
                     ) : (
                         notifications.map(notification => (
-                            <Link
+                        <Link
                                 key={notification.id_notificacao}
-                                to={notification.id_referencia ? `/dream/${notification.id_referencia}` : `/user/${notification.usuario_origem?.id_usuario}`}
+                                to={notification.id_referencia ? `/post/${notification.id_referencia}` : `/user/${notification.usuario_origem?.id_usuario}`}
                                 className={`flex items-start gap-4 p-4 rounded-xl transition-colors hover:bg-gray-100 dark:hover:bg-white/5 ${!notification.lida ? 'bg-gray-100 dark:bg-white/5 border-l-4 border-primary' : ''
                                     }`}
                             >

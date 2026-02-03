@@ -625,8 +625,9 @@ class FollowRequestActionView(APIView):
 from .serializers import ComentarioSerializer, ComentarioCreateSerializer
 
 class ComentarioViewSet(viewsets.ModelViewSet):
-    """ViewSet for comments on dream posts"""
+    """ViewSet for comments on dream posts - Twitter-like"""
     permission_classes = (permissions.IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser,)
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -634,31 +635,88 @@ class ComentarioViewSet(viewsets.ModelViewSet):
         return ComentarioSerializer
     
     def get_serializer_context(self):
-        return {'request': self.request}
+        return {'request': self.request, 'depth': 0}
     
     def get_queryset(self):
-        """Return comments for a specific dream"""
+        """Return comments for a specific dream with optional ordering"""
         dream_id = self.kwargs.get('dream_pk')
-        if dream_id:
-            return Comentario.objects.filter(
-                publicacao_id=dream_id,
-                status=1
-            ).order_by('-data_comentario')
-        return Comentario.objects.none()
+        if not dream_id:
+            return Comentario.objects.none()
+        
+        queryset = Comentario.objects.filter(
+            publicacao_id=dream_id,
+            status=1,
+            comentario_pai__isnull=True  # Only root comments
+        )
+        
+        # Handle ordering parameter
+        ordering = self.request.query_params.get('ordering', 'recent')
+        
+        if ordering == 'relevance':
+            # Order by engagement (likes + replies)
+            from django.db.models import Count
+            queryset = queryset.annotate(
+                engagement=Count('reacaocomentario', distinct=True) + Count('respostas', distinct=True)
+            ).order_by('-engagement', '-data_comentario')
+        elif ordering == 'likes':
+            # Order by like count
+            from django.db.models import Count
+            queryset = queryset.annotate(
+                like_count=Count('reacaocomentario')
+            ).order_by('-like_count', '-data_comentario')
+        else:  # 'recent' is default
+            queryset = queryset.order_by('-data_comentario')
+        
+        return queryset
     
     def perform_create(self, serializer):
         dream_id = self.kwargs.get('dream_pk')
         dream = get_object_or_404(Publicacao, pk=dream_id)
         comment = serializer.save(usuario=self.request.user, publicacao=dream)
         
-        # Create notification for comment (tipo 2 = Comentário)
-        create_notification(
-            usuario_destino=dream.usuario,
-            usuario_origem=self.request.user,
-            tipo=2,
-            id_referencia=dream.id_publicacao,
-            conteudo=comment.conteudo_texto[:100]
-        )
+        # Increment view count for demo purposes
+        comment.views_count = 1
+        comment.save()
+        
+        # Create notification
+        if comment.comentario_pai:
+            # It's a reply - notify the comment author
+            if comment.comentario_pai.usuario.id_usuario != self.request.user.id_usuario:
+                content = comment.conteudo_texto[:50] if comment.conteudo_texto else "enviou uma mídia"
+                create_notification(
+                    usuario_destino=comment.comentario_pai.usuario,
+                    usuario_origem=self.request.user,
+                    tipo=2,
+                    id_referencia=dream.id_publicacao,
+                    conteudo=f"respondeu seu comentário: {content}"
+                )
+        else:
+            # It's a root comment - notify the post owner
+            if dream.usuario.id_usuario != self.request.user.id_usuario:
+                content = comment.conteudo_texto[:100] if comment.conteudo_texto else "enviou uma mídia"
+                create_notification(
+                    usuario_destino=dream.usuario,
+                    usuario_origem=self.request.user,
+                    tipo=2,
+                    id_referencia=dream.id_publicacao,
+                    conteudo=content
+                )
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to return full serialized comment"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        # Return full comment data with all fields
+        dream_id = self.kwargs.get('dream_pk')
+        comment = Comentario.objects.filter(
+            publicacao_id=dream_id,
+            usuario=request.user
+        ).order_by('-data_comentario').first()
+        
+        response_serializer = ComentarioSerializer(comment, context={'request': request, 'depth': 0})
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
     
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
