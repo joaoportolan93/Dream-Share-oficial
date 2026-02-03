@@ -64,7 +64,7 @@ const CommentSection = ({
                 setError('Imagem deve ter no máximo 5MB');
                 return;
             }
-            // Revogar URL anterior para evitar memory leak
+            // Revoke previous URL to prevent memory leak
             if (mediaPreview) {
                 URL.revokeObjectURL(mediaPreview);
             }
@@ -82,7 +82,7 @@ const CommentSection = ({
                 setError('Vídeo deve ter no máximo 50MB');
                 return;
             }
-            // Revogar URL anterior para evitar memory leak
+            // Revoke previous URL to prevent memory leak
             if (mediaPreview) {
                 URL.revokeObjectURL(mediaPreview);
             }

@@ -25,7 +25,7 @@ const ReplyModal = ({ isOpen, onClose, onSubmit, replyingTo, post, currentUser }
             return;
         }
         
-        // Revogar URL anterior para evitar memory leak
+        // Revoke previous URL to prevent memory leak
         if (mediaPreview) {
             URL.revokeObjectURL(mediaPreview);
         }
@@ -45,7 +45,7 @@ const ReplyModal = ({ isOpen, onClose, onSubmit, replyingTo, post, currentUser }
             return;
         }
         
-        // Revogar URL anterior para evitar memory leak
+        // Revoke previous URL to prevent memory leak
         if (mediaPreview) {
             URL.revokeObjectURL(mediaPreview);
         }

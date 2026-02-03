@@ -9,7 +9,7 @@ from core.serializers import ComentarioSerializer
 
 
 def main():
-    # Confirmação antes de deletar
+    # Confirmation before deletion
     confirm = input(
         "This script will delete comments with conteudo_texto starting with "
         "'TEST_HIERARCHY'. Proceed? [y/N]: "
