@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
     FaArrowLeft, FaHeart, FaRegHeart, FaRegComment, 
-    FaBookmark, FaRegBookmark, FaShare, FaEllipsisH,
+    FaRegBookmark, FaShare, FaEllipsisH,
     FaEdit, FaTrash, FaFlag, FaBan, FaVolumeMute
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
-import { likeComment, deleteComment, editComment } from '../services/api';
+import { likeComment, deleteComment } from '../services/api';
 
 const CommentDetailModal = ({ 
     isOpen, 
@@ -37,13 +37,6 @@ const CommentDetailModal = ({
     const isOwner = comment.usuario?.id_usuario === currentUserId;
     const hasReplies = comment.respostas && comment.respostas.length > 0;
 
-    const formatCount = (num) => {
-        if (!num) return '';
-        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-        return num.toString();
-    };
-
     const handleLike = async () => {
         try {
             const response = await likeComment(dreamId, comment.id_comentario);
@@ -70,7 +63,6 @@ const CommentDetailModal = ({
         const [replyLiked, setReplyLiked] = useState(reply.is_liked || false);
         const [replyLikesCount, setReplyLikesCount] = useState(reply.likes_count || 0);
         const replyHasReplies = reply.respostas && reply.respostas.length > 0;
-        const replyIsOwner = reply.usuario?.id_usuario === currentUserId;
 
         const handleReplyLike = async () => {
             try {
@@ -268,7 +260,10 @@ const CommentDetailModal = ({
                                             <div className="absolute right-0 top-10 z-50 bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl py-1 min-w-[160px]">
                                                 {isOwner && (
                                                     <>
-                                                        <button className="flex items-center gap-3 w-full px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5">
+                                                        <button 
+                                                            onClick={() => { setShowMenu(false); }}
+                                                            className="flex items-center gap-3 w-full px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5"
+                                                        >
                                                             <FaEdit size={14} /> Editar
                                                         </button>
                                                         <button

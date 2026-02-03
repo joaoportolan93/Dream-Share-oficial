@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-    FaHeart, FaRegHeart, FaRegComment, FaRetweet, FaBookmark, FaRegBookmark,
-    FaChartBar, FaShare, FaEllipsisH, FaEdit, FaTrash, FaTimes, FaCheck,
-    FaFlag, FaBan, FaVolumeMute, FaPlay
+    FaHeart, FaRegHeart, FaRegComment, FaBookmark, FaRegBookmark,
+    FaShare, FaEllipsisH, FaEdit, FaTrash, FaTimes, FaCheck,
+    FaFlag, FaBan, FaVolumeMute
 } from 'react-icons/fa';
 import { deleteComment, editComment, likeComment } from '../services/api';
 
@@ -12,7 +12,6 @@ const CommentItem = ({
     dreamId,
     currentUserId,
     postOwnerId,
-    postOwnerUsername,
     onDelete,
     onUpdate,
     onReply,
@@ -34,14 +33,6 @@ const CommentItem = ({
     const canDelete = comment.can_delete;
     const canEdit = comment.can_edit;
     const hasReplies = comment.respostas && comment.respostas.length > 0;
-
-    // Format large numbers
-    const formatCount = (num) => {
-        if (!num) return '';
-        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-        return num.toString();
-    };
 
     // Build "Em resposta a" text
     const getReplyingToText = () => {
@@ -347,7 +338,6 @@ const CommentItem = ({
                             dreamId={dreamId}
                             currentUserId={currentUserId}
                             postOwnerId={postOwnerId}
-                            postOwnerUsername={postOwnerUsername}
                             onDelete={onDelete}
                             onUpdate={onUpdate}
                             onReply={onReply}

@@ -64,6 +64,10 @@ const CommentSection = ({
                 setError('Imagem deve ter no máximo 5MB');
                 return;
             }
+            // Revoke previous URL to prevent memory leak
+            if (mediaPreview) {
+                URL.revokeObjectURL(mediaPreview);
+            }
             setSelectedImage(file);
             setSelectedVideo(null);
             setMediaPreview(URL.createObjectURL(file));
@@ -77,6 +81,10 @@ const CommentSection = ({
             if (file.size > 50 * 1024 * 1024) {
                 setError('Vídeo deve ter no máximo 50MB');
                 return;
+            }
+            // Revoke previous URL to prevent memory leak
+            if (mediaPreview) {
+                URL.revokeObjectURL(mediaPreview);
             }
             setSelectedVideo(file);
             setSelectedImage(null);
@@ -128,7 +136,7 @@ const CommentSection = ({
                 setReplyingTo(null);
             } else {
                 // Add new root comment at the beginning
-                setComments([response.data, ...comments]);
+                setComments(prevComments => [response.data, ...prevComments]);
             }
             
             setNewComment('');
@@ -172,7 +180,7 @@ const CommentSection = ({
                     respostas: c.respostas ? removeFromTree(c.respostas) : []
                 }));
         };
-        setComments(removeFromTree(comments));
+        setComments(prev => removeFromTree(prev));
     };
 
     // Handle update (recursive through tree)
@@ -188,7 +196,7 @@ const CommentSection = ({
                 return c;
             });
         };
-        setComments(updateInTree(comments));
+        setComments(prev => updateInTree(prev));
     };
 
     // Handle reply - scroll to input and focus

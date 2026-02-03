@@ -137,7 +137,7 @@ const Comment = ({
     const handleShare = async () => {
         try {
             await navigator.clipboard.writeText(
-                `${window.location.origin}/dream/${dreamId}#comment-${comment.id_comentario}`
+                `${window.location.origin}/post/${dreamId}#comment-${comment.id_comentario}`
             );
             // TODO: Show toast notification
         } catch (err) {

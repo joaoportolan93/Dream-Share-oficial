@@ -169,10 +169,10 @@ const PostPage = () => {
                         return c;
                     });
                 };
-                setComments(addReplyToTree(comments));
+                setComments(prevComments => addReplyToTree(prevComments));
             } else {
                 // Add new root comment
-                setComments([response.data, ...comments]);
+                setComments(prevComments => [response.data, ...prevComments]);
             }
             setShowReplyModal(false);
             setReplyingTo(null);

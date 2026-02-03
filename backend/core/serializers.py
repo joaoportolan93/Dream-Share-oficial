@@ -232,7 +232,8 @@ class ComentarioSerializer(serializers.ModelSerializer):
     def get_can_delete(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return obj.usuario.id_usuario == request.user.id_usuario or obj.publicacao.usuario.id_usuario == request.user.id_usuario
+            # Align with ComentarioViewSet.destroy: only the comment author can delete
+            return obj.usuario.id_usuario == request.user.id_usuario
         return False
 
     def get_can_edit(self, obj):
