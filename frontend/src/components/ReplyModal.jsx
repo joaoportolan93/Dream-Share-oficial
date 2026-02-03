@@ -25,6 +25,10 @@ const ReplyModal = ({ isOpen, onClose, onSubmit, replyingTo, post, currentUser }
             return;
         }
         
+        // Revogar URL anterior para evitar memory leak
+        if (mediaPreview) {
+            URL.revokeObjectURL(mediaPreview);
+        }
         setSelectedImage(file);
         setSelectedVideo(null);
         setMediaPreview(URL.createObjectURL(file));
@@ -41,6 +45,10 @@ const ReplyModal = ({ isOpen, onClose, onSubmit, replyingTo, post, currentUser }
             return;
         }
         
+        // Revogar URL anterior para evitar memory leak
+        if (mediaPreview) {
+            URL.revokeObjectURL(mediaPreview);
+        }
         setSelectedVideo(file);
         setSelectedImage(null);
         setMediaPreview(URL.createObjectURL(file));

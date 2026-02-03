@@ -674,10 +674,6 @@ class ComentarioViewSet(viewsets.ModelViewSet):
         dream = get_object_or_404(Publicacao, pk=dream_id)
         comment = serializer.save(usuario=self.request.user, publicacao=dream)
         
-        # Increment view count for demo purposes
-        comment.views_count = 1
-        comment.save()
-        
         # Create notification
         if comment.comentario_pai:
             # It's a reply - notify the comment author
@@ -708,12 +704,8 @@ class ComentarioViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         
-        # Return full comment data with all fields
-        dream_id = self.kwargs.get('dream_pk')
-        comment = Comentario.objects.filter(
-            publicacao_id=dream_id,
-            usuario=request.user
-        ).order_by('-data_comentario').first()
+        # Return full comment data with all fields, using the instance just created
+        comment = serializer.instance
         
         response_serializer = ComentarioSerializer(comment, context={'request': request, 'depth': 0})
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)

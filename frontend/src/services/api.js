@@ -106,19 +106,15 @@ export const unfollowUser = (userId) => api.delete(`/api/users/${userId}/follow/
 export const getSuggestedUsers = () => api.get('/api/users/suggested/');
 
 // Comments endpoints
-export const getComments = (dreamId, ordering = 'recent') => 
-    api.get(`/api/dreams/${dreamId}/comments/?ordering=${ordering}`);
+export const getComments = (dreamId, ordering = 'recent') =>
+    api.get(`/api/dreams/${dreamId}/comments/`, {
+        params: { ordering },
+    });
 
 export const createComment = (dreamId, formData) => {
-    // formData can be a FormData object (with media) or plain object
     if (formData instanceof FormData) {
-        return api.post(`/api/dreams/${dreamId}/comments/`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        return api.post(`/api/dreams/${dreamId}/comments/`, formData);
     }
-    // Legacy support for plain object
     return api.post(`/api/dreams/${dreamId}/comments/`, formData);
 };
 
