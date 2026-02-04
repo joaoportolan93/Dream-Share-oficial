@@ -106,12 +106,17 @@ export const unfollowUser = (userId) => api.delete(`/api/users/${userId}/follow/
 export const getSuggestedUsers = () => api.get('/api/users/suggested/');
 
 // Comments endpoints
-export const getComments = (dreamId) => api.get(`/api/dreams/${dreamId}/comments/`);
+export const getComments = (dreamId, ordering = 'recent') =>
+    api.get(`/api/dreams/${dreamId}/comments/`, {
+        params: { ordering },
+    });
 
-export const createComment = (dreamId, text, parentId = null) => api.post(`/api/dreams/${dreamId}/comments/`, {
-    conteudo_texto: text,
-    comentario_pai: parentId
-});
+export const createComment = (dreamId, formData) => {
+    if (formData instanceof FormData) {
+        return api.post(`/api/dreams/${dreamId}/comments/`, formData);
+    }
+    return api.post(`/api/dreams/${dreamId}/comments/`, formData);
+};
 
 export const editComment = (dreamId, commentId, text) => api.patch(`/api/dreams/${dreamId}/comments/${commentId}/`, {
     conteudo_texto: text
@@ -120,6 +125,7 @@ export const editComment = (dreamId, commentId, text) => api.patch(`/api/dreams/
 export const deleteComment = (dreamId, commentId) => api.delete(`/api/dreams/${dreamId}/comments/${commentId}/`);
 
 export const likeComment = (dreamId, commentId) => api.post(`/api/dreams/${dreamId}/comments/${commentId}/like/`);
+
 
 
 // Notifications endpoints

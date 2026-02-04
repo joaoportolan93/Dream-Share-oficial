@@ -177,20 +177,135 @@ class SeguidorSerializer(serializers.ModelSerializer):
 from .models import Comentario
 
 class ComentarioSerializer(serializers.ModelSerializer):
-    """Serializer for reading comments"""
+    """Serializer for reading comments - Twitter-like structure"""
     usuario = UserSerializer(read_only=True)
+    respostas = serializers.SerializerMethodField()
+    respostas_count = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    replying_to = serializers.SerializerMethodField()
+    post_owner = serializers.SerializerMethodField()
+    imagem_url = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Comentario
-        fields = ('id_comentario', 'usuario', 'conteudo_texto', 'data_comentario', 'editado')
-        read_only_fields = ('id_comentario', 'usuario', 'data_comentario', 'editado')
+        fields = (
+            'id_comentario', 'usuario', 'conteudo_texto', 'data_comentario', 
+            'editado', 'respostas', 'respostas_count', 'likes_count', 'is_liked', 
+            'can_delete', 'can_edit', 'replying_to', 'post_owner',
+            'imagem_url', 'video_url', 'views_count'
+        )
+        read_only_fields = fields
+
+    def get_respostas(self, obj):
+        # Recursive serialization - limit depth to avoid infinite loops
+        depth = self.context.get('depth', 0)
+        if depth < 3 and obj.respostas.exists():
+            context = {**self.context, 'depth': depth + 1}
+            return ComentarioSerializer(
+                obj.respostas.filter(status=1).order_by('data_comentario'), 
+                many=True, 
+                context=context
+            ).data
+        return []
+
+    def get_respostas_count(self, obj):
+        return obj.respostas.filter(status=1).count()
+
+    def get_likes_count(self, obj):
+        from .models import ReacaoComentario
+        return ReacaoComentario.objects.filter(comentario=obj).count()
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from .models import ReacaoComentario
+            return ReacaoComentario.objects.filter(
+                comentario=obj,
+                usuario=request.user
+            ).exists()
+        return False
+
+    def get_can_delete(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            # Align with ComentarioViewSet.destroy: only the comment author can delete
+            return obj.usuario.id_usuario == request.user.id_usuario
+        return False
+
+    def get_can_edit(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.usuario.id_usuario == request.user.id_usuario
+        return False
+
+    def get_replying_to(self, obj):
+        """Returns info about who this comment is replying to (for 'Em resposta a' display)"""
+        if obj.comentario_pai:
+            parent = obj.comentario_pai
+            result = {
+                'comment_author': {
+                    'id': parent.usuario.id_usuario,
+                    'nome_usuario': parent.usuario.nome_usuario,
+                    'nome_completo': parent.usuario.nome_completo,
+                }
+            }
+            # If replying to a reply, also include the post owner
+            if parent.comentario_pai:
+                post_owner = obj.publicacao.usuario
+                if post_owner.id_usuario != parent.usuario.id_usuario:
+                    result['post_owner'] = {
+                        'id': post_owner.id_usuario,
+                        'nome_usuario': post_owner.nome_usuario,
+                    }
+            return result
+        return None
+
+    def get_post_owner(self, obj):
+        """Returns the post owner info for context"""
+        owner = obj.publicacao.usuario
+        return {
+            'id': owner.id_usuario,
+            'nome_usuario': owner.nome_usuario,
+        }
+
+    def get_imagem_url(self, obj):
+        if obj.imagem:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.imagem.url)
+            return obj.imagem.url
+        return None
+
+    def get_video_url(self, obj):
+        if obj.video:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.video.url)
+            return obj.video.url
+        return None
 
 
 class ComentarioCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating comments"""
+    """Serializer for creating comments with media support"""
     class Meta:
         model = Comentario
-        fields = ('conteudo_texto',)
+        fields = ('conteudo_texto', 'comentario_pai', 'imagem', 'video')
+        extra_kwargs = {
+            'comentario_pai': {'required': False},
+            'conteudo_texto': {'required': False},
+            'imagem': {'required': False},
+            'video': {'required': False},
+        }
+
+    def validate(self, data):
+        # At least text or media must be provided
+        if not data.get('conteudo_texto') and not data.get('imagem') and not data.get('video'):
+            raise serializers.ValidationError("Comentário deve ter texto ou mídia")
+        return data
 
 
 # Notificacao Serializers

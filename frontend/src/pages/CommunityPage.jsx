@@ -247,17 +247,17 @@ const CommunityPage = () => {
                 <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">
 
                     {/* Integrated Sidebar Card */}
-                    <div className="bg-[#1a1a1b] rounded-md border border-gray-700 overflow-hidden text-gray-300">
+                    <div className="bg-white dark:bg-[#1a1a1b] rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden text-gray-700 dark:text-gray-300">
 
                         {/* 1. Header Area aligned with content */}
                         <div className="p-4 pb-0">
                             <div className="flex justify-between items-start mb-2">
-                                <h2 className="text-base font-bold text-gray-200">{community.nome}</h2>
+                                <h2 className="text-base font-bold text-gray-900 dark:text-gray-200">{community.nome}</h2>
                                 {community.is_moderator && (
-                                    <FaPen className="cursor-pointer hover:text-white" onClick={() => alert('Editar widget (Em breve)')} size={12} />
+                                    <FaPen className="cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white" onClick={() => alert('Editar widget (Em breve)')} size={12} />
                                 )}
                             </div>
-                            <p className="text-sm mb-4 leading-relaxed text-gray-400">
+                            <p className="text-sm mb-4 leading-relaxed text-gray-500 dark:text-gray-400">
                                 {community.descricao}
                             </p>
 
@@ -275,20 +275,20 @@ const CommunityPage = () => {
                             </button>
 
                             {/* Stats */}
-                            <div className="border-t border-gray-700/50 pt-4 pb-4">
+                            <div className="border-t border-gray-200 dark:border-gray-700/50 pt-4 pb-4">
                                 <div className="flex justify-between items-center mb-2">
                                     <h3 className="text-xs font-bold text-gray-500 uppercase">Estatísticas</h3>
-                                    <span className="text-xs text-gray-500 cursor-pointer hover:text-gray-300">Da última semana &gt;</span>
+                                    <span className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">Da última semana &gt;</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <div className="text-xl font-medium text-white">
+                                        <div className="text-xl font-medium text-gray-900 dark:text-white">
                                             {community.membros_count}
                                         </div>
                                         <div className="text-xs text-gray-500">Visitantes</div>
                                     </div>
                                     <div>
-                                        <div className="text-xl font-medium text-white flex items-center gap-1">
+                                        <div className="text-xl font-medium text-gray-900 dark:text-white flex items-center gap-1">
                                             12
                                         </div>
                                         <div className="text-xs text-gray-500">Contribuição</div>
@@ -299,23 +299,23 @@ const CommunityPage = () => {
                         </div>
 
                         {/* Separator */}
-                        <div className="h-px bg-gray-700/50 w-full"></div>
+                        <div className="h-px bg-gray-200 dark:bg-gray-700/50 w-full"></div>
 
                         {/* Rules Section */}
                         <div className="p-4">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-bold text-gray-500 text-xs uppercase">Regras do r/{community.nome}</h3>
-                                {community.is_moderator && <FaPen className="cursor-pointer text-gray-500 hover:text-white" size={12} />}
+                                {community.is_moderator && <FaPen className="cursor-pointer text-gray-500 hover:text-gray-900 dark:hover:text-white" size={12} />}
                             </div>
 
                             {community.regras && community.regras.length > 0 ? (
                                 <div className="space-y-1">
                                     {community.regras.map((rule, idx) => (
-                                        <div key={idx} className="group border-b border-gray-800 last:border-0">
-                                            <div className="py-2 flex justify-between items-center cursor-pointer hover:bg-white/5 transition-colors px-1 rounded">
-                                                <div className="flex gap-2 text-sm text-gray-300">
+                                        <div key={idx} className="group border-b border-gray-200 dark:border-gray-800 last:border-0">
+                                            <div className="py-2 flex justify-between items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 transition-colors px-1 rounded">
+                                                <div className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
                                                     <span className="font-bold min-w-[15px]">{idx + 1}</span>
-                                                    <span className="font-medium group-hover:text-white transition-colors">{rule.title}</span>
+                                                    <span className="font-medium group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{rule.title}</span>
                                                 </div>
                                                 <FaChevronDown size={10} className="text-gray-500" />
                                             </div>
@@ -323,14 +323,14 @@ const CommunityPage = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-sm text-gray-500 italic py-2 text-center border border-dashed border-gray-700 rounded">
+                                <div className="text-sm text-gray-500 italic py-2 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded">
                                     Nenhuma regra definida
                                 </div>
                             )}
                         </div>
 
                         {/* Separator */}
-                        <div className="h-px bg-gray-700/50 w-full"></div>
+                        <div className="h-px bg-gray-200 dark:bg-gray-700/50 w-full"></div>
 
                         {/* Moderators Section */}
                         <div className="p-4">

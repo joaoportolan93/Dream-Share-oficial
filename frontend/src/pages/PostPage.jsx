@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FaArrowLeft, FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaFlag, FaBookmark, FaRegBookmark, FaUserFriends } from 'react-icons/fa';
+import { FaArrowLeft, FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaFlag, FaBookmark, FaRegBookmark, FaUserFriends, FaFire, FaClock } from 'react-icons/fa';
 import { getDream, deleteDream, likeDream, saveDream, getComments, createComment, getProfile } from '../services/api';
 import ReplyModal from '../components/ReplyModal';
 import CommentItem from '../components/CommentItem';
+import CommentDetailModal from '../components/CommentDetailModal';
 import ReportModal from '../components/ReportModal';
+
+// Sorting tabs configuration
+const SORT_TABS = [
+    { key: 'relevance', label: 'Mais Relevantes', icon: FaFire },
+    { key: 'recent', label: 'Mais Recentes', icon: FaClock },
+    { key: 'likes', label: 'Mais Curtidos', icon: FaHeart },
+];
 
 const PostPage = () => {
     const { id } = useParams();
@@ -29,11 +37,23 @@ const PostPage = () => {
     // Reply modal
     const [showReplyModal, setShowReplyModal] = useState(false);
     const [replyingTo, setReplyingTo] = useState(null);
+    
+    // Sorting
+    const [sortBy, setSortBy] = useState('recent');
+    
+    // Comment report
+    const [reportingComment, setReportingComment] = useState(null);
+    const [showCommentReportModal, setShowCommentReportModal] = useState(false);
+    
+    // Comment detail modal (click to expand)
+    const [selectedComment, setSelectedComment] = useState(null);
+    const [showCommentDetail, setShowCommentDetail] = useState(false);
 
     useEffect(() => {
         fetchCurrentUser();
         fetchPost();
         fetchComments();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchCurrentUser = async () => {
@@ -61,10 +81,10 @@ const PostPage = () => {
         }
     };
 
-    const fetchComments = async () => {
+    const fetchComments = async (ordering = sortBy) => {
         setCommentsLoading(true);
         try {
-            const response = await getComments(id);
+            const response = await getComments(id, ordering);
             setComments(response.data);
         } catch (err) {
             console.error('Error fetching comments:', err);
@@ -72,6 +92,14 @@ const PostPage = () => {
             setCommentsLoading(false);
         }
     };
+
+    // Re-fetch comments when sort changes
+    useEffect(() => {
+        if (id) {
+            fetchComments(sortBy);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sortBy]);
 
     const handleLike = async () => {
         const wasLiked = liked;
@@ -116,14 +144,15 @@ const PostPage = () => {
         setShowReplyModal(true);
     };
 
-    const handleReplySubmit = async (text, parentId) => {
+    const handleReplySubmit = async (formData, parentId) => {
         try {
-            const response = await createComment(id, text, parentId);
+            // formData is now a FormData object from ReplyModal
+            const response = await createComment(id, formData);
 
             if (parentId) {
-                // Add reply to parent comment
-                setComments(prevComments =>
-                    prevComments.map(c => {
+                // Add reply to parent comment (recursive search)
+                const addReplyToTree = (comments) => {
+                    return comments.map(c => {
                         if (c.id_comentario === parentId) {
                             return {
                                 ...c,
@@ -131,18 +160,37 @@ const PostPage = () => {
                                 respostas_count: (c.respostas_count || 0) + 1
                             };
                         }
+                        if (c.respostas && c.respostas.length > 0) {
+                            return {
+                                ...c,
+                                respostas: addReplyToTree(c.respostas)
+                            };
+                        }
                         return c;
-                    })
-                );
+                    });
+                };
+                setComments(prevComments => addReplyToTree(prevComments));
             } else {
                 // Add new root comment
-                setComments([response.data, ...comments]);
+                setComments(prevComments => [response.data, ...prevComments]);
             }
             setShowReplyModal(false);
             setReplyingTo(null);
         } catch (err) {
             console.error('Error creating comment:', err);
         }
+    };
+
+    // Handle report comment
+    const handleReportComment = (comment) => {
+        setReportingComment(comment);
+        setShowCommentReportModal(true);
+    };
+
+    // Handle click on comment to expand (like clicking a tweet)
+    const handleCommentClick = (comment) => {
+        setSelectedComment(comment);
+        setShowCommentDetail(true);
     };
 
     const handleDeleteComment = (commentId) => {
@@ -392,6 +440,27 @@ const PostPage = () => {
 
                 {/* Comments Section */}
                 <div className="bg-white dark:bg-transparent">
+                    {/* Sorting Tabs */}
+                    <div className="flex border-b border-gray-200 dark:border-white/10">
+                        {SORT_TABS.map(({ key, label, icon: Icon }) => (
+                            <button
+                                key={key}
+                                onClick={() => setSortBy(key)}
+                                className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-all relative
+                                    ${sortBy === key 
+                                        ? 'text-gray-900 dark:text-white' 
+                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
+                                    }`}
+                            >
+                                <Icon size={14} />
+                                <span className="hidden sm:inline">{label}</span>
+                                {sortBy === key && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+
                     {commentsLoading ? (
                         <div className="flex justify-center py-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
@@ -415,9 +484,12 @@ const PostPage = () => {
                                     dreamId={id}
                                     currentUserId={user?.id_usuario}
                                     postOwnerId={post.usuario?.id_usuario}
+                                    postOwnerUsername={post.usuario?.nome_usuario}
                                     onDelete={handleDeleteComment}
                                     onUpdate={handleUpdateComment}
                                     onReply={handleReply}
+                                    onReport={handleReportComment}
+                                    onClick={handleCommentClick}
                                     formatDate={formatRelativeDate}
                                 />
                             ))}
@@ -436,12 +508,35 @@ const PostPage = () => {
                 currentUser={user}
             />
 
-            {/* Report Modal */}
+            {/* Report Post Modal */}
             <ReportModal
                 isOpen={showReportModal}
                 onClose={() => setShowReportModal(false)}
                 contentId={post.id_publicacao}
                 contentType={1}
+            />
+
+            {/* Report Comment Modal */}
+            <ReportModal
+                isOpen={showCommentReportModal}
+                onClose={() => { setShowCommentReportModal(false); setReportingComment(null); }}
+                contentId={reportingComment?.id_comentario}
+                contentType={2}
+            />
+
+            {/* Comment Detail Modal - shows comment like a post */}
+            <CommentDetailModal
+                isOpen={showCommentDetail}
+                onClose={() => { setShowCommentDetail(false); setSelectedComment(null); }}
+                comment={selectedComment}
+                dreamId={id}
+                currentUserId={user?.id_usuario}
+                postOwnerId={post?.usuario?.id_usuario}
+                onDelete={handleDeleteComment}
+                onUpdate={handleUpdateComment}
+                onReply={handleReply}
+                onReport={handleReportComment}
+                formatDate={formatRelativeDate}
             />
         </div>
     );

@@ -44,6 +44,7 @@ class Usuario(AbstractBaseUser):
     data_criacao = models.DateTimeField(default=timezone.now)
     verificado = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)  # Required for authentication
     
     STATUS_CHOICES = (
         (1, 'Ativo'),
@@ -169,11 +170,18 @@ class Comentario(models.Model):
     id_comentario = models.AutoField(primary_key=True)
     publicacao = models.ForeignKey(Publicacao, on_delete=models.CASCADE, db_column='id_publicacao')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
-    conteudo_texto = models.TextField()
+    conteudo_texto = models.TextField(blank=True, default='')
     data_comentario = models.DateTimeField(default=timezone.now)
     editado = models.BooleanField(default=False)
     data_edicao = models.DateTimeField(null=True, blank=True)
     comentario_pai = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, db_column='id_comentario_pai', related_name='respostas')
+    
+    # Media fields for Twitter-like comments
+    imagem = models.ImageField(upload_to='comment_images/', null=True, blank=True)
+    video = models.FileField(upload_to='comment_videos/', null=True, blank=True)
+    
+    # Engagement metrics
+    views_count = models.IntegerField(default=0)
     
     STATUS_CHOICES = (
         (1, 'Ativo'),
@@ -184,6 +192,7 @@ class Comentario(models.Model):
 
     class Meta:
         db_table = 'comentarios'
+
 
 class ReacaoPublicacao(models.Model):
     id_reacao = models.AutoField(primary_key=True)
