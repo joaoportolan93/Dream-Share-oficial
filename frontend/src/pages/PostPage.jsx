@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { FaArrowLeft, FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaFlag, FaBookmark, FaRegBookmark, FaUserFriends, FaFire, FaClock } from 'react-icons/fa';
+import { FaArrowLeft, FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaFlag, FaBookmark, FaRegBookmark, FaUserFriends, FaChevronDown, FaRobot } from 'react-icons/fa';
 import { getDream, deleteDream, likeDream, saveDream, getComments, createComment, getProfile } from '../services/api';
-import ReplyModal from '../components/ReplyModal';
+import ReplyComposer from '../components/ReplyComposer';
 import CommentItem from '../components/CommentItem';
 import CommentDetailModal from '../components/CommentDetailModal';
 import ReportModal from '../components/ReportModal';
 
-// Sorting tabs configuration
-const SORT_TABS = [
-    { key: 'relevance', label: 'Mais Relevantes', icon: FaFire },
-    { key: 'recent', label: 'Mais Recentes', icon: FaClock },
-    { key: 'likes', label: 'Mais Curtidos', icon: FaHeart },
+// Sorting options
+const SORT_OPTIONS = [
+    { key: 'relevance', label: 'Mais Relevantes' },
+    { key: 'recent', label: 'Mais Recentes' },
+    { key: 'likes', label: 'Mais Curtidos' },
 ];
 
 const PostPage = () => {
@@ -34,20 +34,23 @@ const PostPage = () => {
     const [comments, setComments] = useState([]);
     const [commentsLoading, setCommentsLoading] = useState(true);
 
-    // Reply modal
-    const [showReplyModal, setShowReplyModal] = useState(false);
-    const [replyingTo, setReplyingTo] = useState(null);
-    
+    // CENTRALIZED INLINE REPLY STATE - Only ONE reply input can be open at a time
+    const [activeReplyId, setActiveReplyId] = useState(null);
+
     // Sorting
-    const [sortBy, setSortBy] = useState('recent');
-    
+    const [sortBy, setSortBy] = useState('relevance');
+    const [showSortMenu, setShowSortMenu] = useState(false);
+
     // Comment report
     const [reportingComment, setReportingComment] = useState(null);
     const [showCommentReportModal, setShowCommentReportModal] = useState(false);
-    
+
     // Comment detail modal (click to expand)
     const [selectedComment, setSelectedComment] = useState(null);
     const [showCommentDetail, setShowCommentDetail] = useState(false);
+
+    // Spam toggle
+    const [showSpamArea, setShowSpamArea] = useState(false);
 
     useEffect(() => {
         fetchCurrentUser();
@@ -85,7 +88,15 @@ const PostPage = () => {
         setCommentsLoading(true);
         try {
             const response = await getComments(id, ordering);
-            setComments(response.data);
+
+            // MOCKING SPAM DATA FOR DEMO
+            // Adding mock properties to demonstrate the "Spam" feature
+            const enrichedComments = response.data.map((c, i) => ({
+                ...c,
+                is_spam: i > 2 && i % 4 === 0 // Mark every 4th comment as "spam" for visual test after index 2
+            }));
+
+            setComments(enrichedComments);
         } catch (err) {
             console.error('Error fetching comments:', err);
         } finally {
@@ -140,17 +151,20 @@ const PostPage = () => {
     };
 
     const handleReply = (comment = null) => {
-        setReplyingTo(comment);
-        setShowReplyModal(true);
+        // If it's a main post reply, focus the main composer
+        if (!comment) {
+            document.querySelector('textarea')?.focus();
+        }
     };
 
     const handleReplySubmit = async (formData, parentId) => {
         try {
-            // formData is now a FormData object from ReplyModal
+            if (parentId) {
+                formData.append('comentario_pai', parentId);
+            }
             const response = await createComment(id, formData);
 
             if (parentId) {
-                // Add reply to parent comment (recursive search)
                 const addReplyToTree = (comments) => {
                     return comments.map(c => {
                         if (c.id_comentario === parentId) {
@@ -171,23 +185,19 @@ const PostPage = () => {
                 };
                 setComments(prevComments => addReplyToTree(prevComments));
             } else {
-                // Add new root comment
                 setComments(prevComments => [response.data, ...prevComments]);
             }
-            setShowReplyModal(false);
-            setReplyingTo(null);
+            setActiveReplyId(null); // Close the inline reply input after successful submission
         } catch (err) {
             console.error('Error creating comment:', err);
         }
     };
 
-    // Handle report comment
     const handleReportComment = (comment) => {
         setReportingComment(comment);
         setShowCommentReportModal(true);
     };
 
-    // Handle click on comment to expand (like clicking a tweet)
     const handleCommentClick = (comment) => {
         setSelectedComment(comment);
         setShowCommentDetail(true);
@@ -256,6 +266,10 @@ const PostPage = () => {
 
     const isOwner = post?.usuario?.id_usuario === user?.id_usuario;
 
+    // Filter comments for display (separate spam)
+    const displayComments = comments.filter(c => !c.is_spam);
+    const spamComments = comments.filter(c => c.is_spam);
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-[#0f0d1a] flex items-center justify-center">
@@ -296,7 +310,7 @@ const PostPage = () => {
             {/* Main Content */}
             <div className="max-w-2xl mx-auto">
                 {/* Post */}
-                <div className="bg-white dark:bg-white/5 border-b border-gray-200 dark:border-white/5 p-6 backdrop-blur-sm rounded-2xl my-4">
+                <div className="bg-white dark:bg-white/5 border-b border-gray-200 dark:border-white/5 p-6 backdrop-blur-sm rounded-none sm:rounded-2xl sm:my-4 transition-all hover:bg-white/90">
                     {/* User Header */}
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
@@ -396,24 +410,22 @@ const PostPage = () => {
                     )}
 
                     {/* Timestamp */}
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 border-b border-gray-200 dark:border-white/5 pb-4">
                         {formatDate(post.data_publicacao)} · <span className="text-primary">{post.views_count || 0} Visualizações</span>
                     </p>
 
                     {/* Stats Bar */}
-                    <div className="py-3 border-t border-b border-gray-200 dark:border-white/10 mb-3">
-                        <div className="flex gap-6">
-                            <span className="text-gray-900 dark:text-white">
-                                <strong>{likesCount}</strong> <span className="text-gray-500">Curtidas</span>
-                            </span>
-                            <span className="text-gray-900 dark:text-white">
-                                <strong>{comments.length}</strong> <span className="text-gray-500">Comentários</span>
-                            </span>
-                        </div>
+                    <div className="flex gap-6 mb-4">
+                        <span className="text-gray-900 dark:text-white">
+                            <strong>{likesCount}</strong> <span className="text-gray-500">Curtidas</span>
+                        </span>
+                        <span className="text-gray-900 dark:text-white">
+                            <strong>{comments.length}</strong> <span className="text-gray-500">Comentários</span>
+                        </span>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-around py-2">
+                    <div className="flex items-center justify-around py-2 border-t border-gray-200 dark:border-white/10">
                         <button
                             onClick={() => handleReply(null)}
                             className="flex items-center gap-2 p-2 text-gray-500 hover:text-primary transition-colors"
@@ -438,46 +450,68 @@ const PostPage = () => {
                     </div>
                 </div>
 
+                {/* INLINE REPLY COMPOSER - Fixed in flow before comments */}
+                <div className="bg-white dark:bg-transparent px-6 sm:px-0 max-w-2xl mx-auto -mt-2 mb-4">
+                    <ReplyComposer
+                        mode="inline"
+                        placeholder="Postar sua resposta"
+                        currentUser={user}
+                        onSubmit={(formData) => handleReplySubmit(formData, null)}
+                    />
+                </div>
+
                 {/* Comments Section */}
-                <div className="bg-white dark:bg-transparent">
-                    {/* Sorting Tabs */}
-                    <div className="flex border-b border-gray-200 dark:border-white/10">
-                        {SORT_TABS.map(({ key, label, icon: Icon }) => (
+                <div className="bg-white dark:bg-transparent min-h-[300px] border-t border-gray-200 dark:border-white/5 sm:border-t-0">
+
+                    {/* Compact Sort Header */}
+                    <div className="px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-white/5">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Comentários</h3>
+                        <div className="relative">
                             <button
-                                key={key}
-                                onClick={() => setSortBy(key)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-all relative
-                                    ${sortBy === key 
-                                        ? 'text-gray-900 dark:text-white' 
-                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
-                                    }`}
+                                onClick={() => setShowSortMenu(!showSortMenu)}
+                                className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-primary transition-colors bg-gray-100 dark:bg-white/5 px-3 py-1.5 rounded-full"
                             >
-                                <Icon size={14} />
-                                <span className="hidden sm:inline">{label}</span>
-                                {sortBy === key && (
-                                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />
-                                )}
+                                {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
+                                <FaChevronDown size={10} />
                             </button>
-                        ))}
+
+                            {showSortMenu && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)}></div>
+                                    <div className="absolute right-0 top-10 z-20 bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl min-w-[160px] py-1 overflow-hidden">
+                                        {SORT_OPTIONS.map(option => (
+                                            <button
+                                                key={option.key}
+                                                onClick={() => { setSortBy(option.key); setShowSortMenu(false); }}
+                                                className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${sortBy === option.key ? 'text-primary font-bold' : 'text-gray-700 dark:text-gray-300'
+                                                    }`}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {commentsLoading ? (
                         <div className="flex justify-center py-8">
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                         </div>
-                    ) : comments.length === 0 ? (
+                    ) : displayComments.length === 0 && spamComments.length === 0 ? (
                         <div className="text-center py-8">
                             <p className="text-gray-500 dark:text-gray-400">Nenhum comentário ainda</p>
                             <button
-                                onClick={() => handleReply(null)}
+                                onClick={() => document.querySelector('textarea')?.focus()}
                                 className="mt-2 text-primary hover:underline"
                             >
                                 Seja o primeiro a comentar
                             </button>
                         </div>
                     ) : (
-                        <div>
-                            {comments.map(comment => (
+                        <div className="divide-y divide-gray-200 dark:divide-white/10">
+                            {displayComments.map((comment, index) => (
                                 <CommentItem
                                     key={comment.id_comentario}
                                     comment={comment}
@@ -487,26 +521,72 @@ const PostPage = () => {
                                     postOwnerUsername={post.usuario?.nome_usuario}
                                     onDelete={handleDeleteComment}
                                     onUpdate={handleUpdateComment}
-                                    onReply={handleReply}
+                                    onReplySubmit={handleReplySubmit}
                                     onReport={handleReportComment}
                                     onClick={handleCommentClick}
                                     formatDate={formatRelativeDate}
+                                    isLast={index === displayComments.length - 1}
+                                    currentUser={user}
+                                    activeReplyId={activeReplyId}
+                                    setActiveReplyId={setActiveReplyId}
                                 />
                             ))}
+
+                            {/* SPAM SECTION */}
+                            {spamComments.length > 0 && (
+                                <div className="border-t border-gray-200 dark:border-white/5">
+                                    <button
+                                        onClick={() => setShowSpamArea(!showSpamArea)}
+                                        className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-gray-500">
+                                                <FaRobot />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                    Provável Spam
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {spamComments.length} comentários ocultos
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <FaChevronDown className={`text-gray-400 transition-transform ${showSpamArea ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {showSpamArea && (
+                                        <div className="bg-gray-50 dark:bg-black/20 divide-y divide-gray-200 dark:divide-white/5">
+                                            {spamComments.map((comment, index) => (
+                                                <CommentItem
+                                                    key={comment.id_comentario}
+                                                    comment={comment}
+                                                    dreamId={id}
+                                                    currentUserId={user?.id_usuario}
+                                                    postOwnerId={post.usuario?.id_usuario}
+                                                    postOwnerUsername={post.usuario?.nome_usuario}
+                                                    onDelete={handleDeleteComment}
+                                                    onUpdate={handleUpdateComment}
+                                                    onReplySubmit={handleReplySubmit}
+                                                    onReport={handleReportComment}
+                                                    onClick={handleCommentClick}
+                                                    formatDate={formatRelativeDate}
+                                                    isLast={index === spamComments.length - 1}
+                                                    currentUser={user}
+                                                    activeReplyId={activeReplyId}
+                                                    setActiveReplyId={setActiveReplyId}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Reply Modal */}
-            <ReplyModal
-                isOpen={showReplyModal}
-                onClose={() => { setShowReplyModal(false); setReplyingTo(null); }}
-                onSubmit={handleReplySubmit}
-                replyingTo={replyingTo}
-                post={post}
-                currentUser={user}
-            />
+            {/* Deleted ReplyModal */}
 
             {/* Report Post Modal */}
             <ReportModal
