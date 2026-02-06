@@ -141,7 +141,7 @@ const Home = () => {
                     </p>
                 </div>
             ) : !loading && !error && (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col divide-y divide-gray-200 dark:divide-white/10">
                     {dreams.map(dream => (
                         <DreamCard
                             key={dream.id_publicacao}

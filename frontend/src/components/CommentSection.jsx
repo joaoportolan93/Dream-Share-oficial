@@ -1,46 +1,69 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    FaPaperPlane, FaTimes, FaImage, FaVideo, FaSpinner,
-    FaFire, FaClock, FaHeart
-} from 'react-icons/fa';
+import { FaChevronDown, FaSpinner, FaImage, FaVideo, FaTimes } from 'react-icons/fa';
+import { FaRegComment } from 'react-icons/fa6';
 import { getComments, createComment } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import Comment from './Comment';
+import CommentItem from './CommentItem';
 
-// Sorting tabs configuration
-const SORT_TABS = [
-    { key: 'relevance', label: 'Mais Relevantes', icon: FaFire },
-    { key: 'recent', label: 'Mais Recentes', icon: FaClock },
-    { key: 'likes', label: 'Mais Curtidos', icon: FaHeart },
+// Dropdown sorting options (NO TABS!)
+const SORT_OPTIONS = [
+    { key: 'relevance', label: 'Mais Relevantes' },
+    { key: 'recent', label: 'Mais Recentes' },
+    { key: 'likes', label: 'Mais Curtidos' },
 ];
 
-const CommentSection = ({ 
-    dreamId, 
-    currentUserId, 
+/**
+ * CommentSection - Twitter/X-style comment section
+ * Features:
+ * - Dropdown sorting (not tabs!)
+ * - Centralized activeReplyId state
+ * - Clean recursion for nested comments
+ */
+const CommentSection = ({
+    dreamId,
+    currentUserId,
     postOwnerId,
     postOwnerUsername,
-    onReportComment 
+    onReportComment,
+    currentUser
 }) => {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
-    const [replyingTo, setReplyingTo] = useState(null);
+
+    // STATE LIFTING: Control which comment is being replied to (only ONE at a time)
+    const [activeReplyId, setActiveReplyId] = useState(null);
+
+    // Sorting dropdown state
     const [sortBy, setSortBy] = useState('recent');
-    
-    // Media upload state
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
+
+    // Media state for top-level comment
     const [selectedImage, setSelectedImage] = useState(null);
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [mediaPreview, setMediaPreview] = useState(null);
-    
+
     const inputRef = useRef(null);
     const imageInputRef = useRef(null);
     const videoInputRef = useRef(null);
+    const sortDropdownRef = useRef(null);
 
     useEffect(() => {
         fetchComments();
     }, [dreamId, sortBy]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target)) {
+                setShowSortDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const fetchComments = async () => {
         setLoading(true);
@@ -56,89 +79,66 @@ const CommentSection = ({
         }
     };
 
-    // Handle image selection
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+
+        if (diff < 60) return `${diff}s`;
+        if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+        if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    };
+
+    // Handle media
     const handleImageSelect = (e) => {
         const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                setError('Imagem deve ter no máximo 5MB');
-                return;
-            }
-            // Revoke previous URL to prevent memory leak
-            if (mediaPreview) {
-                URL.revokeObjectURL(mediaPreview);
-            }
-            setSelectedImage(file);
-            setSelectedVideo(null);
-            setMediaPreview(URL.createObjectURL(file));
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Imagem deve ter no máximo 5MB');
+            return;
         }
+        if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+        setSelectedImage(file);
+        setSelectedVideo(null);
+        setMediaPreview(URL.createObjectURL(file));
     };
 
-    // Handle video selection
     const handleVideoSelect = (e) => {
         const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 50 * 1024 * 1024) {
-                setError('Vídeo deve ter no máximo 50MB');
-                return;
-            }
-            // Revoke previous URL to prevent memory leak
-            if (mediaPreview) {
-                URL.revokeObjectURL(mediaPreview);
-            }
-            setSelectedVideo(file);
-            setSelectedImage(null);
-            setMediaPreview(URL.createObjectURL(file));
+        if (!file) return;
+        if (file.size > 50 * 1024 * 1024) {
+            setError('Vídeo deve ter no máximo 50MB');
+            return;
         }
+        if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+        setSelectedVideo(file);
+        setSelectedImage(null);
+        setMediaPreview(URL.createObjectURL(file));
     };
 
-    // Clear media
     const clearMedia = () => {
+        if (mediaPreview) URL.revokeObjectURL(mediaPreview);
         setSelectedImage(null);
         setSelectedVideo(null);
-        if (mediaPreview) {
-            URL.revokeObjectURL(mediaPreview);
-        }
         setMediaPreview(null);
     };
 
-    // Handle submit
+    // Submit top-level comment
     const handleSubmit = async (e) => {
         e.preventDefault();
         if ((!newComment.trim() && !selectedImage && !selectedVideo) || submitting) return;
 
         setSubmitting(true);
         try {
-            const parentId = replyingTo?.id_comentario || null;
-            
-            // Create FormData for media upload
             const formData = new FormData();
-            if (newComment.trim()) {
-                formData.append('conteudo_texto', newComment.trim());
-            }
-            if (parentId) {
-                formData.append('comentario_pai', parentId);
-            }
-            if (selectedImage) {
-                formData.append('imagem', selectedImage);
-            }
-            if (selectedVideo) {
-                formData.append('video', selectedVideo);
-            }
+            if (newComment.trim()) formData.append('conteudo_texto', newComment.trim());
+            if (selectedImage) formData.append('imagem', selectedImage);
+            if (selectedVideo) formData.append('video', selectedVideo);
 
             const response = await createComment(dreamId, formData);
-
-            if (replyingTo) {
-                // Add reply to the parent comment
-                setComments(prevComments =>
-                    addReplyToComment(prevComments, replyingTo.id_comentario, response.data)
-                );
-                setReplyingTo(null);
-            } else {
-                // Add new root comment at the beginning
-                setComments(prevComments => [response.data, ...prevComments]);
-            }
-            
+            setComments(prev => [response.data, ...prev]);
             setNewComment('');
             clearMedia();
             setError(null);
@@ -150,7 +150,24 @@ const CommentSection = ({
         }
     };
 
-    // Helper to add reply to nested comment structure
+    // Handle INLINE reply submission (from CommentItem -> ReplyInput)
+    const handleReplySubmit = async (formData, parentId) => {
+        try {
+            formData.append('comentario_pai', parentId);
+            const response = await createComment(dreamId, formData);
+
+            // Add reply to tree
+            setComments(prev => addReplyToComment(prev, parentId, response.data));
+
+            // CLOSE the reply input (centralized control)
+            setActiveReplyId(null);
+        } catch (err) {
+            console.error('Error submitting reply:', err);
+            setError('Erro ao enviar resposta');
+        }
+    };
+
+    // Helper to add reply recursively
     const addReplyToComment = (comments, parentId, newReply) => {
         return comments.map(c => {
             if (c.id_comentario === parentId) {
@@ -170,7 +187,7 @@ const CommentSection = ({
         });
     };
 
-    // Handle delete (recursive through tree)
+    // Handle delete (recursive)
     const handleDelete = (commentId) => {
         const removeFromTree = (comments) => {
             return comments
@@ -183,7 +200,7 @@ const CommentSection = ({
         setComments(prev => removeFromTree(prev));
     };
 
-    // Handle update (recursive through tree)
+    // Handle update (recursive)
     const handleUpdate = (commentId, newText) => {
         const updateInTree = (comments) => {
             return comments.map(c => {
@@ -199,110 +216,81 @@ const CommentSection = ({
         setComments(prev => updateInTree(prev));
     };
 
-    // Handle reply - scroll to input and focus
-    const handleReply = (comment) => {
-        setReplyingTo(comment);
-        setNewComment(`@${comment.usuario?.nome_usuario} `);
-        inputRef.current?.focus();
-    };
-
-    // Cancel reply
-    const cancelReply = () => {
-        setReplyingTo(null);
-        setNewComment('');
-    };
+    const currentSortLabel = SORT_OPTIONS.find(opt => opt.key === sortBy)?.label || 'Mais Recentes';
 
     return (
         <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-t border-white/10"
+            className="border-t border-gray-200 dark:border-white/10"
         >
-            {/* Sorting Tabs */}
-            <div className="flex border-b border-white/10">
-                {SORT_TABS.map(({ key, label, icon: Icon }) => (
-                    <button
-                        key={key}
-                        onClick={() => setSortBy(key)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-medium transition-all relative
-                            ${sortBy === key 
-                                ? 'text-white' 
-                                : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                            }`}
-                    >
-                        <Icon size={14} />
-                        <span className="hidden sm:inline">{label}</span>
-                        {sortBy === key && (
-                            <motion.div
-                                layoutId="sortIndicator"
-                                className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full"
-                            />
-                        )}
-                    </button>
-                ))}
+            {/* DROPDOWN SORTING (Twitter-style, not tabs!) */}
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 relative" ref={sortDropdownRef}>
+                <button
+                    onClick={() => setShowSortDropdown(!showSortDropdown)}
+                    className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                    <FaRegComment size={14} />
+                    <span>{currentSortLabel}</span>
+                    <FaChevronDown size={12} className={`transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                <AnimatePresence>
+                    {showSortDropdown && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute top-full left-4 mt-1 bg-white dark:bg-[#16213e] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl py-1 min-w-[200px] z-50"
+                        >
+                            {SORT_OPTIONS.map(({ key, label }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => {
+                                        setSortBy(key);
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className={`w-full text-left px-4 py-3 text-sm transition-colors ${sortBy === key
+                                            ? 'bg-primary/10 text-primary font-semibold'
+                                            : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5'
+                                        }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            {/* Reply Indicator */}
-            <AnimatePresence>
-                {replyingTo && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary/10 border-b border-white/10"
-                    >
-                        <span className="text-sm text-gray-300">
-                            Respondendo a{' '}
-                            <span className="text-primary font-medium">
-                                @{replyingTo.usuario?.nome_usuario}
-                            </span>
-                        </span>
-                        <button
-                            onClick={cancelReply}
-                            className="ml-auto p-1 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
-                        >
-                            <FaTimes size={14} />
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             {/* New Comment Form */}
-            <form onSubmit={handleSubmit} className="p-4 border-b border-white/10">
+            <form onSubmit={handleSubmit} className="p-4 border-b border-gray-200 dark:border-white/10">
                 <div className="flex gap-3">
-                    {/* User Avatar Placeholder */}
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/50 to-purple-500/50 flex-shrink-0" />
-                    
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/50 to-purple-500/50 flex-shrink-0 overflow-hidden">
+                        {currentUser?.avatar_url && (
+                            <img src={currentUser.avatar_url} alt="Você" className="w-full h-full object-cover" />
+                        )}
+                    </div>
+
                     <div className="flex-1 space-y-3">
-                        {/* Text Input */}
                         <textarea
                             ref={inputRef}
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
-                            placeholder={replyingTo ? "Poste sua resposta" : "Adicione um comentário..."}
-                            className="w-full bg-transparent text-white text-lg placeholder-gray-500 resize-none focus:outline-none min-h-[60px]"
+                            placeholder="Adicione um comentário..."
+                            className="w-full bg-transparent text-gray-900 dark:text-white text-[15px] placeholder-gray-500 dark:placeholder-gray-400 resize-none focus:outline-none min-h-[60px]"
                             disabled={submitting}
                             rows={2}
                         />
 
                         {/* Media Preview */}
                         {mediaPreview && (
-                            <div className="relative rounded-2xl overflow-hidden border border-white/10 max-w-xs">
-                                {selectedImage && (
-                                    <img 
-                                        src={mediaPreview} 
-                                        alt="Preview" 
-                                        className="max-h-40 object-cover" 
-                                    />
-                                )}
-                                {selectedVideo && (
-                                    <video 
-                                        src={mediaPreview} 
-                                        className="max-h-40 object-cover" 
-                                        controls 
-                                    />
-                                )}
+                            <div className="relative rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 max-w-xs">
+                                {selectedImage && <img src={mediaPreview} alt="Preview" className="max-h-40 object-cover" />}
+                                {selectedVideo && <video src={mediaPreview} className="max-h-40 object-cover" controls />}
                                 <button
                                     type="button"
                                     onClick={clearMedia}
@@ -313,55 +301,27 @@ const CommentSection = ({
                             </div>
                         )}
 
-                        {/* Actions Row */}
-                        <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                            {/* Media Buttons */}
-                            <div className="flex items-center gap-1">
-                                <input
-                                    ref={imageInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageSelect}
-                                    className="hidden"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => imageInputRef.current?.click()}
-                                    className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
-                                    disabled={submitting}
-                                >
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-white/10">
+                            <div className="flex gap-1">
+                                <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+                                <button type="button" onClick={() => imageInputRef.current?.click()} className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors" disabled={submitting}>
                                     <FaImage size={18} />
                                 </button>
 
-                                <input
-                                    ref={videoInputRef}
-                                    type="file"
-                                    accept="video/*"
-                                    onChange={handleVideoSelect}
-                                    className="hidden"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => videoInputRef.current?.click()}
-                                    className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
-                                    disabled={submitting}
-                                >
+                                <input ref={videoInputRef} type="file" accept="video/*" onChange={handleVideoSelect} className="hidden" />
+                                <button type="button" onClick={() => videoInputRef.current?.click()} className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors" disabled={submitting}>
                                     <FaVideo size={18} />
                                 </button>
                             </div>
 
-                            {/* Submit Button */}
                             <button
                                 type="submit"
                                 disabled={(!newComment.trim() && !selectedImage && !selectedVideo) || submitting}
-                                className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary/80 text-white font-bold rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-primary/80 text-white font-bold rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             >
-                                {submitting ? (
-                                    <FaSpinner className="animate-spin" size={14} />
-                                ) : (
-                                    <FaPaperPlane size={14} />
-                                )}
-                                <span>{replyingTo ? 'Responder' : 'Postar'}</span>
+                                {submitting && <FaSpinner className="animate-spin" size={14} />}
+                                <span>{submitting ? 'Postando...' : 'Postar'}</span>
                             </button>
                         </div>
                     </div>
@@ -397,23 +357,27 @@ const CommentSection = ({
                 </div>
             )}
 
-            {/* Comments List */}
-            <div className="divide-y divide-white/5">
+            {/* Comments List - Recursive Rendering */}
+            <div className="divide-y divide-gray-200 dark:divide-white/5">
                 <AnimatePresence>
-                    {comments.map((comment) => (
-                        <Comment
+                    {comments.map((comment, idx) => (
+                        <CommentItem
                             key={comment.id_comentario}
                             comment={comment}
                             dreamId={dreamId}
                             currentUserId={currentUserId}
                             postOwnerId={postOwnerId}
-                            postOwnerUsername={postOwnerUsername}
                             onDelete={handleDelete}
                             onUpdate={handleUpdate}
-                            onReply={handleReply}
+                            onReplySubmit={handleReplySubmit}
                             onReport={onReportComment}
+                            formatDate={formatDate}
                             depth={0}
-                            maxDepth={3}
+                            isLast={idx === comments.length - 1}
+                            currentUser={currentUser}
+                            // CENTRALIZED STATE CONTROL
+                            activeReplyId={activeReplyId}
+                            setActiveReplyId={setActiveReplyId}
                         />
                     ))}
                 </AnimatePresence>
