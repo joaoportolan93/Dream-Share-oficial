@@ -164,6 +164,8 @@ class TestComments:
         
         # Verify both are deleted
         assert dream.comentario_set.filter(status=1).count() == 0
+        assert not dream.comentario_set.filter(id_comentario=parent_comment.id_comentario).exists()
+        assert not dream.comentario_set.filter(id_comentario=reply.id_comentario).exists()
 
 @pytest.mark.django_db
 class TestFollow:
