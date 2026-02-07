@@ -734,6 +734,14 @@ class ComentarioViewSet(viewsets.ModelViewSet):
                 {'error': 'Você só pode excluir seus próprios comentários'},
                 status=status.HTTP_403_FORBIDDEN
             )
+        
+        # Prevent deletion if comment has replies to preserve thread structure
+        if instance.respostas.filter(status=1).exists():
+            return Response(
+                {'error': 'Não é possível excluir um comentário que possui respostas. Exclua as respostas primeiro.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         return super().destroy(request, *args, **kwargs)
 
 

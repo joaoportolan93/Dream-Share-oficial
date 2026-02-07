@@ -120,6 +120,50 @@ class TestComments:
         response = auth_client.post(url, data)
         assert response.status_code == status.HTTP_201_CREATED
         assert dream.comentario_set.count() == 1
+    
+    def test_delete_comment_without_replies(self, auth_client, user):
+        """Test that comments without replies can be deleted"""
+        dream = PublicacaoFactory(usuario=user)
+        comment = ComentarioFactory(publicacao=dream, usuario=user)
+        url = reverse('dream-comments-detail', args=[dream.id_publicacao, comment.id_comentario])
+        
+        response = auth_client.delete(url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not dream.comentario_set.filter(id_comentario=comment.id_comentario).exists()
+    
+    def test_cannot_delete_comment_with_replies(self, auth_client, user):
+        """Test that comments with replies cannot be deleted to preserve thread structure"""
+        dream = PublicacaoFactory(usuario=user)
+        parent_comment = ComentarioFactory(publicacao=dream, usuario=user)
+        # Create a reply to the parent comment
+        reply = ComentarioFactory(publicacao=dream, usuario=user, comentario_pai=parent_comment)
+        
+        url = reverse('dream-comments-detail', args=[dream.id_publicacao, parent_comment.id_comentario])
+        response = auth_client.delete(url)
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'respostas' in response.data['error'].lower()
+        # Verify comment still exists
+        assert dream.comentario_set.filter(id_comentario=parent_comment.id_comentario).exists()
+    
+    def test_can_delete_reply_then_parent(self, auth_client, user):
+        """Test that replies can be deleted first, then the parent comment"""
+        dream = PublicacaoFactory(usuario=user)
+        parent_comment = ComentarioFactory(publicacao=dream, usuario=user)
+        reply = ComentarioFactory(publicacao=dream, usuario=user, comentario_pai=parent_comment)
+        
+        # First, delete the reply
+        reply_url = reverse('dream-comments-detail', args=[dream.id_publicacao, reply.id_comentario])
+        response = auth_client.delete(reply_url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        
+        # Now, delete the parent (should succeed since reply is gone)
+        parent_url = reverse('dream-comments-detail', args=[dream.id_publicacao, parent_comment.id_comentario])
+        response = auth_client.delete(parent_url)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        
+        # Verify both are deleted
+        assert dream.comentario_set.filter(status=1).count() == 0
 
 @pytest.mark.django_db
 class TestFollow:
