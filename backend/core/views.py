@@ -643,11 +643,19 @@ class ComentarioViewSet(viewsets.ModelViewSet):
         if not dream_id:
             return Comentario.objects.none()
         
-        queryset = Comentario.objects.filter(
+        # Base queryset: all active comments for this dream
+        base_queryset = Comentario.objects.filter(
             publicacao_id=dream_id,
-            status=1,
-            comentario_pai__isnull=True  # Only root comments
+            status=1
         )
+        
+        # For detail actions (retrieve, update, destroy), return ALL comments
+        # This allows deleting/editing nested replies, not just root comments
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'like']:
+            return base_queryset
+        
+        # For list action, only return root comments (children are nested in serializer)
+        queryset = base_queryset.filter(comentario_pai__isnull=True)
         
         # Handle ordering parameter
         ordering = self.request.query_params.get('ordering', 'recent')

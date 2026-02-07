@@ -10,108 +10,14 @@ import { deleteComment, editComment, likeComment } from '../services/api';
 import ReplyInput from './ReplyInput';
 
 /**
- * CommentItem - Twitter/X Design + Reddit Thread Connectors
+ * CommentItem - Reddit-style L-Connectors + Twitter/X Icons
  * 
- * FEATURES:
- * - Unlimited recursion depth (no artificial limits)
- * - L-shaped connectors using CSS pseudo-elements
- * - isLast logic: vertical line stops at curve for last items
- * - Twitter-style thin icons (FaReg from fa6)
- * - Inline reply system with centralized state
- * - Collapsible threads
+ * ARCHITECTURE:
+ * - NO DEPTH LIMITS: Pure infinite recursion
+ * - Each child draws its OWN connector (not inherited from parent)
+ * - isLast prop controls whether vertical line stops at the L-curve
+ * - Inline reply system (NO MODALS)
  */
-
-// CSS for pseudo-element L-connectors (injected once)
-const threadLineStyles = `
-.comment-thread-line {
-    position: relative;
-}
-
-/* Vertical line coming from parent - positioned in the gutter */
-.comment-thread-line::before {
-    content: '';
-    position: absolute;
-    left: 19px;
-    top: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, rgb(156 163 175 / 0.4), rgb(156 163 175 / 0.3));
-}
-
-/* For non-last items: vertical line extends full height */
-.comment-thread-line:not(.is-last)::before {
-    bottom: 0;
-}
-
-/* For last items: vertical line stops at the horizontal curve */
-.comment-thread-line.is-last::before {
-    height: 28px;
-}
-
-/* Horizontal connector (the "L" curve) */
-.comment-thread-line::after {
-    content: '';
-    position: absolute;
-    left: 19px;
-    top: 26px;
-    width: 16px;
-    height: 2px;
-    background: rgb(156 163 175 / 0.4);
-    border-bottom-left-radius: 6px;
-}
-
-/* Corner piece for smooth L curve */
-.comment-thread-line .corner-piece {
-    position: absolute;
-    left: 19px;
-    top: 18px;
-    width: 8px;
-    height: 10px;
-    border-left: 2px solid rgb(156 163 175 / 0.4);
-    border-bottom: 2px solid rgb(156 163 175 / 0.4);
-    border-bottom-left-radius: 8px;
-    pointer-events: none;
-}
-
-/* Dark mode adjustments */
-.dark .comment-thread-line::before {
-    background: linear-gradient(to bottom, rgb(255 255 255 / 0.15), rgb(255 255 255 / 0.1));
-}
-
-.dark .comment-thread-line::after {
-    background: rgb(255 255 255 / 0.15);
-}
-
-.dark .comment-thread-line .corner-piece {
-    border-color: rgb(255 255 255 / 0.15);
-}
-
-/* Parent's continuation line (extends down from avatar to children) */
-.has-children-line {
-    position: relative;
-}
-
-.has-children-line::after {
-    content: '';
-    position: absolute;
-    left: 19px;
-    top: 48px;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, rgb(96 165 250 / 0.5), rgb(168 85 247 / 0.4));
-    border-radius: 1px;
-}
-`;
-
-// Inject styles once
-if (typeof document !== 'undefined') {
-    const styleId = 'comment-thread-styles';
-    if (!document.getElementById(styleId)) {
-        const styleSheet = document.createElement('style');
-        styleSheet.id = styleId;
-        styleSheet.textContent = threadLineStyles;
-        document.head.appendChild(styleSheet);
-    }
-}
 
 const CommentItem = ({
     comment,
@@ -130,6 +36,8 @@ const CommentItem = ({
     setActiveReplyId
 }) => {
     const navigate = useNavigate();
+
+    // Local state
     const [isLiked, setIsLiked] = useState(comment.is_liked || false);
     const [likesCount, setLikesCount] = useState(comment.likes_count || 0);
     const [showMenu, setShowMenu] = useState(false);
@@ -139,18 +47,17 @@ const CommentItem = ({
     const [isSaved, setIsSaved] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
 
+    // Spam handling
     const isProbableSpam = comment.is_spam || false;
     const [showSpamContent, setShowSpamContent] = useState(!isProbableSpam);
 
-    const isOwner = comment.usuario?.id_usuario === currentUserId;
+    // Derived values
     const canDelete = comment.can_delete;
     const canEdit = comment.can_edit;
     const hasReplies = comment.respostas && comment.respostas.length > 0;
     const isReplying = activeReplyId === comment.id_comentario;
 
-    // Progressive indentation: 40px per level, capped visually but NOT capped in rendering
-    const indentPx = depth * 40;
-
+    // ===== HANDLERS =====
     const toggleReply = () => {
         setActiveReplyId(isReplying ? null : comment.id_comentario);
     };
@@ -213,6 +120,7 @@ const CommentItem = ({
         await onReplySubmit(formData, comment.id_comentario);
     };
 
+    // ===== RENDER: CONTENT =====
     const renderContent = () => {
         if (!showSpamContent) {
             return (
@@ -290,21 +198,18 @@ const CommentItem = ({
 
                         {/* TWITTER/X ACTION BAR */}
                         <div className="flex items-center gap-6 mt-3">
-                            {/* Reply */}
                             <button
                                 onClick={(e) => handleAction(e, toggleReply)}
-                                className={`group flex items-center gap-2 transition-colors ${isReplying ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-blue-500'
-                                    }`}
+                                className={`group flex items-center gap-2 transition-colors ${
+                                    isReplying ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400 hover:text-blue-500'
+                                }`}
                             >
                                 <div className="p-1.5 rounded-full group-hover:bg-blue-500/10 transition-colors">
                                     <FaRegComment size={16} />
                                 </div>
-                                {comment.respostas_count > 0 && (
-                                    <span className="text-sm">{comment.respostas_count}</span>
-                                )}
+                                {comment.respostas_count > 0 && <span className="text-sm">{comment.respostas_count}</span>}
                             </button>
 
-                            {/* Retweet/Share */}
                             <button
                                 onClick={(e) => handleAction(e, handleShare)}
                                 className="group flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-green-500 transition-colors"
@@ -314,11 +219,11 @@ const CommentItem = ({
                                 </div>
                             </button>
 
-                            {/* Like */}
                             <button
                                 onClick={(e) => handleAction(e, handleLike)}
-                                className={`group flex items-center gap-2 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
-                                    }`}
+                                className={`group flex items-center gap-2 transition-colors ${
+                                    isLiked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'
+                                }`}
                             >
                                 <div className="p-1.5 rounded-full group-hover:bg-red-500/10 transition-colors">
                                     {isLiked ? <FaHeart size={16} /> : <FaRegHeart size={16} />}
@@ -326,11 +231,11 @@ const CommentItem = ({
                                 {likesCount > 0 && <span className="text-sm">{likesCount}</span>}
                             </button>
 
-                            {/* Bookmark */}
                             <button
                                 onClick={(e) => handleAction(e, () => setIsSaved(!isSaved))}
-                                className={`flex items-center gap-2 transition-colors ${isSaved ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'
-                                    }`}
+                                className={`flex items-center gap-2 transition-colors ${
+                                    isSaved ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'
+                                }`}
                             >
                                 <div className="p-1.5 rounded-full hover:bg-primary/10 transition-colors">
                                     {isSaved ? <FaBookmark size={16} /> : <FaRegBookmark size={16} />}
@@ -352,23 +257,74 @@ const CommentItem = ({
         );
     };
 
+    // ===== STYLES FOR L-CONNECTOR =====
+    // The connector is drawn BY THE CHILD, not inherited from parent
+    const connectorStyles = depth > 0 ? {
+        // Vertical line coming from above
+        verticalLine: {
+            position: 'absolute',
+            left: '19px',
+            top: 0,
+            width: '2px',
+            height: isLast ? '24px' : '100%', // Stop at curve if last, else full height
+            background: 'linear-gradient(to bottom, rgba(156,163,175,0.4), rgba(156,163,175,0.25))',
+        },
+        // Horizontal curve pointing to avatar
+        horizontalLine: {
+            position: 'absolute',
+            left: '19px',
+            top: '22px',
+            width: '20px',
+            height: '2px',
+            background: 'rgba(156,163,175,0.4)',
+            borderBottomLeftRadius: '8px',
+        },
+        // Smooth corner piece
+        cornerPiece: {
+            position: 'absolute',
+            left: '19px',
+            top: '12px',
+            width: '12px',
+            height: '12px',
+            borderLeft: '2px solid rgba(156,163,175,0.4)',
+            borderBottom: '2px solid rgba(156,163,175,0.4)',
+            borderBottomLeftRadius: '10px',
+        }
+    } : null;
+
+    // Parent-to-children continuation line
+    const childLineStyle = hasReplies && !isCollapsed ? {
+        position: 'absolute',
+        left: '19px',
+        top: '48px',
+        bottom: 0,
+        width: '2px',
+        background: 'linear-gradient(to bottom, rgba(96,165,250,0.5), rgba(168,85,247,0.35))',
+        borderRadius: '1px',
+    } : null;
+
+    // ===== MAIN RENDER =====
     return (
         <div
             className="relative"
-            style={{ marginLeft: depth > 0 ? `${indentPx}px` : 0 }}
+            style={{ marginLeft: depth > 0 ? `${depth * 9}px` : 0 }}
         >
-            {/* L-CONNECTOR: Only for nested comments (depth > 0) */}
-            {depth > 0 && (
-                <div className={`comment-thread-line ${isLast ? 'is-last' : ''}`}>
-                    <div className="corner-piece" />
-                </div>
+            {/* L-CONNECTOR: Drawn by this child (depth > 0) */}
+            {depth > 0 && connectorStyles && (
+                <>
+                    <div style={connectorStyles.verticalLine} className="dark:opacity-60" />
+                    <div style={connectorStyles.horizontalLine} className="dark:opacity-60" />
+                    <div style={connectorStyles.cornerPiece} className="dark:opacity-60" />
+                </>
             )}
 
             <article
-                className={`relative hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors ${hasReplies && !isCollapsed ? 'has-children-line' : ''
-                    }`}
+                className="relative hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
                 id={`comment-${comment.id_comentario}`}
             >
+                {/* Parent-to-children continuation line */}
+                {childLineStyle && <div style={childLineStyle} />}
+
                 <div className="flex gap-3 p-4 relative z-10">
                     {/* AVATAR COLUMN */}
                     <div className="flex-shrink-0 flex flex-col items-center">
@@ -376,14 +332,14 @@ const CommentItem = ({
                             <img
                                 src={comment.usuario?.avatar_url || 'https://randomuser.me/api/portraits/lego/1.jpg'}
                                 alt={comment.usuario?.nome_completo}
-                                className={`w-10 h-10 rounded-full object-cover border-2 transition-all ${hasReplies && !isCollapsed
+                                className={`w-10 h-10 rounded-full object-cover border-2 transition-all ${
+                                    hasReplies && !isCollapsed
                                         ? 'border-blue-400 dark:border-blue-500'
                                         : 'border-gray-200 dark:border-white/10'
-                                    }`}
+                                }`}
                             />
                         </Link>
 
-                        {/* Collapse toggle */}
                         {hasReplies && (
                             <button
                                 onClick={toggleCollapse}
@@ -397,7 +353,7 @@ const CommentItem = ({
 
                     {/* CONTENT COLUMN */}
                     <div className="flex-1 min-w-0">
-                        {/* Header row */}
+                        {/* Header */}
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1 flex-wrap min-w-0">
                                 <span
@@ -415,7 +371,7 @@ const CommentItem = ({
                                 </span>
                             </div>
 
-                            {/* Options menu */}
+                            {/* Options Menu */}
                             <div className="relative">
                                 <button
                                     onClick={(e) => handleAction(e, () => setShowMenu(!showMenu))}
@@ -423,21 +379,31 @@ const CommentItem = ({
                                 >
                                     <FaEllipsisH size={14} />
                                 </button>
+
                                 {showMenu && (
                                     <>
                                         <div className="fixed inset-0 z-40" onClick={(e) => handleAction(e, () => setShowMenu(false))} />
                                         <div className="absolute right-0 top-8 z-50 bg-white dark:bg-[#16213e] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl py-1 min-w-[160px]">
                                             {canEdit && (
-                                                <button onClick={(e) => handleAction(e, () => { setIsEditing(true); setShowMenu(false); })} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5">
+                                                <button
+                                                    onClick={(e) => handleAction(e, () => { setIsEditing(true); setShowMenu(false); })}
+                                                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5"
+                                                >
                                                     <FaEdit size={13} /> Editar
                                                 </button>
                                             )}
                                             {canDelete && (
-                                                <button onClick={(e) => handleAction(e, () => { handleDelete(); setShowMenu(false); })} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-white/5">
+                                                <button
+                                                    onClick={(e) => handleAction(e, () => { handleDelete(); setShowMenu(false); })}
+                                                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-white/5"
+                                                >
                                                     <FaTrash size={13} /> Excluir
                                                 </button>
                                             )}
-                                            <button onClick={(e) => handleAction(e, () => { if (onReport) onReport(comment); setShowMenu(false); })} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5">
+                                            <button
+                                                onClick={(e) => handleAction(e, () => { if (onReport) onReport(comment); setShowMenu(false); })}
+                                                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5"
+                                            >
                                                 <FaFlag size={13} /> Denunciar
                                             </button>
                                         </div>
@@ -450,9 +416,9 @@ const CommentItem = ({
                     </div>
                 </div>
 
-                {/* INLINE REPLY INPUT */}
+                {/* INLINE REPLY INPUT (NO MODAL!) */}
                 {isReplying && !isCollapsed && (
-                    <div onClick={(e) => e.stopPropagation()} className="pl-[52px] pr-4 pb-3">
+                    <div onClick={(e) => e.stopPropagation()} className="pl-[56px] pr-4 pb-3">
                         <ReplyInput
                             placeholder="Postar sua resposta"
                             currentUser={currentUser}
@@ -464,7 +430,7 @@ const CommentItem = ({
                 )}
             </article>
 
-            {/* NESTED REPLIES - Unlimited Recursion */}
+            {/* NESTED REPLIES - INFINITE RECURSION (NO DEPTH LIMIT!) */}
             {hasReplies && !isCollapsed && (
                 <div className="relative">
                     {comment.respostas.map((reply, idx) => (
