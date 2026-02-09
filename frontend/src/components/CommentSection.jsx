@@ -5,7 +5,7 @@ import { getComments, createComment } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import CommentItem from './CommentItem';
 
-// Dropdown sorting options (NO TABS!)
+// Sorting options (dropdown, not tabs!)
 const SORT_OPTIONS = [
     { key: 'relevance', label: 'Mais Relevantes' },
     { key: 'recent', label: 'Mais Recentes' },
@@ -14,10 +14,12 @@ const SORT_OPTIONS = [
 
 /**
  * CommentSection - Twitter/X-style comment section
- * Features:
- * - Dropdown sorting (not tabs!)
- * - Centralized activeReplyId state
- * - Clean recursion for nested comments
+ * 
+ * FEATURES:
+ * - Dropdown sorting (NO TABS)
+ * - Centralized activeReplyId state (only one reply input at a time)
+ * - Pure recursive rendering with no depth limits
+ * - Inline reply system (NO MODALS)
  */
 const CommentSection = ({
     dreamId,
@@ -27,16 +29,17 @@ const CommentSection = ({
     onReportComment,
     currentUser
 }) => {
+    // State
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
 
-    // STATE LIFTING: Control which comment is being replied to (only ONE at a time)
+    // CENTRALIZED: Only ONE reply input can be active at a time
     const [activeReplyId, setActiveReplyId] = useState(null);
 
-    // Sorting dropdown state
+    // Sorting dropdown
     const [sortBy, setSortBy] = useState('recent');
     const [showSortDropdown, setShowSortDropdown] = useState(false);
 
@@ -45,11 +48,13 @@ const CommentSection = ({
     const [selectedVideo, setSelectedVideo] = useState(null);
     const [mediaPreview, setMediaPreview] = useState(null);
 
+    // Refs
     const inputRef = useRef(null);
     const imageInputRef = useRef(null);
     const videoInputRef = useRef(null);
     const sortDropdownRef = useRef(null);
 
+    // ===== EFFECTS =====
     useEffect(() => {
         fetchComments();
     }, [dreamId, sortBy]);
@@ -65,6 +70,7 @@ const CommentSection = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // ===== API CALLS =====
     const fetchComments = async () => {
         setLoading(true);
         try {
@@ -79,6 +85,7 @@ const CommentSection = ({
         }
     };
 
+    // ===== HELPERS =====
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -91,7 +98,7 @@ const CommentSection = ({
         return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
     };
 
-    // Handle media
+    // ===== MEDIA HANDLING =====
     const handleImageSelect = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -125,7 +132,7 @@ const CommentSection = ({
         setMediaPreview(null);
     };
 
-    // Submit top-level comment
+    // ===== SUBMIT TOP-LEVEL COMMENT =====
     const handleSubmit = async (e) => {
         e.preventDefault();
         if ((!newComment.trim() && !selectedImage && !selectedVideo) || submitting) return;
@@ -150,16 +157,16 @@ const CommentSection = ({
         }
     };
 
-    // Handle INLINE reply submission (from CommentItem -> ReplyInput)
+    // ===== HANDLE INLINE REPLY SUBMISSION =====
     const handleReplySubmit = async (formData, parentId) => {
         try {
             formData.append('comentario_pai', parentId);
             const response = await createComment(dreamId, formData);
 
-            // Add reply to tree
+            // Add reply to the correct position in the tree
             setComments(prev => addReplyToComment(prev, parentId, response.data));
 
-            // CLOSE the reply input (centralized control)
+            // Close the reply input (centralized control)
             setActiveReplyId(null);
         } catch (err) {
             console.error('Error submitting reply:', err);
@@ -167,7 +174,7 @@ const CommentSection = ({
         }
     };
 
-    // Helper to add reply recursively
+    // Recursive helper to add reply to the correct parent
     const addReplyToComment = (comments, parentId, newReply) => {
         return comments.map(c => {
             if (c.id_comentario === parentId) {
@@ -187,7 +194,7 @@ const CommentSection = ({
         });
     };
 
-    // Handle delete (recursive)
+    // ===== DELETE HANDLER (recursive) =====
     const handleDelete = (commentId) => {
         const removeFromTree = (comments) => {
             return comments
@@ -200,7 +207,7 @@ const CommentSection = ({
         setComments(prev => removeFromTree(prev));
     };
 
-    // Handle update (recursive)
+    // ===== UPDATE HANDLER (recursive) =====
     const handleUpdate = (commentId, newText) => {
         const updateInTree = (comments) => {
             return comments.map(c => {
@@ -218,6 +225,7 @@ const CommentSection = ({
 
     const currentSortLabel = SORT_OPTIONS.find(opt => opt.key === sortBy)?.label || 'Mais Recentes';
 
+    // ===== RENDER =====
     return (
         <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -225,7 +233,7 @@ const CommentSection = ({
             exit={{ opacity: 0, height: 0 }}
             className="border-t border-gray-200 dark:border-white/10"
         >
-            {/* DROPDOWN SORTING (Twitter-style, not tabs!) */}
+            {/* ===== DROPDOWN SORTING (Twitter-style) ===== */}
             <div className="px-4 py-3 border-b border-gray-200 dark:border-white/10 relative" ref={sortDropdownRef}>
                 <button
                     onClick={() => setShowSortDropdown(!showSortDropdown)}
@@ -252,10 +260,11 @@ const CommentSection = ({
                                         setSortBy(key);
                                         setShowSortDropdown(false);
                                     }}
-                                    className={`w-full text-left px-4 py-3 text-sm transition-colors ${sortBy === key
+                                    className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+                                        sortBy === key
                                             ? 'bg-primary/10 text-primary font-semibold'
                                             : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5'
-                                        }`}
+                                    }`}
                                 >
                                     {label}
                                 </button>
@@ -265,7 +274,7 @@ const CommentSection = ({
                 </AnimatePresence>
             </div>
 
-            {/* New Comment Form */}
+            {/* ===== NEW COMMENT FORM ===== */}
             <form onSubmit={handleSubmit} className="p-4 border-b border-gray-200 dark:border-white/10">
                 <div className="flex gap-3">
                     {/* Avatar */}
@@ -305,12 +314,22 @@ const CommentSection = ({
                         <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-white/10">
                             <div className="flex gap-1">
                                 <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
-                                <button type="button" onClick={() => imageInputRef.current?.click()} className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors" disabled={submitting}>
+                                <button 
+                                    type="button" 
+                                    onClick={() => imageInputRef.current?.click()} 
+                                    className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors" 
+                                    disabled={submitting}
+                                >
                                     <FaImage size={18} />
                                 </button>
 
                                 <input ref={videoInputRef} type="file" accept="video/*" onChange={handleVideoSelect} className="hidden" />
-                                <button type="button" onClick={() => videoInputRef.current?.click()} className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors" disabled={submitting}>
+                                <button 
+                                    type="button" 
+                                    onClick={() => videoInputRef.current?.click()} 
+                                    className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors" 
+                                    disabled={submitting}
+                                >
                                     <FaVideo size={18} />
                                 </button>
                             </div>
@@ -328,7 +347,7 @@ const CommentSection = ({
                 </div>
             </form>
 
-            {/* Error Message */}
+            {/* ===== ERROR MESSAGE ===== */}
             <AnimatePresence>
                 {error && (
                     <motion.div
@@ -342,14 +361,14 @@ const CommentSection = ({
                 )}
             </AnimatePresence>
 
-            {/* Loading State */}
+            {/* ===== LOADING STATE ===== */}
             {loading && (
                 <div className="flex justify-center py-8">
                     <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
             )}
 
-            {/* Empty State */}
+            {/* ===== EMPTY STATE ===== */}
             {!loading && comments.length === 0 && (
                 <div className="text-center py-12 px-4">
                     <p className="text-gray-400 text-lg mb-2">Nenhum comentário ainda</p>
@@ -357,7 +376,7 @@ const CommentSection = ({
                 </div>
             )}
 
-            {/* Comments List - Recursive Rendering */}
+            {/* ===== COMMENTS LIST - PURE RECURSIVE RENDERING ===== */}
             <div className="divide-y divide-gray-200 dark:divide-white/5">
                 <AnimatePresence>
                     {comments.map((comment, idx) => (
@@ -375,7 +394,7 @@ const CommentSection = ({
                             depth={0}
                             isLast={idx === comments.length - 1}
                             currentUser={currentUser}
-                            // CENTRALIZED STATE CONTROL
+                            // CENTRALIZED STATE: Only ONE reply input at a time
                             activeReplyId={activeReplyId}
                             setActiveReplyId={setActiveReplyId}
                         />

@@ -643,11 +643,19 @@ class ComentarioViewSet(viewsets.ModelViewSet):
         if not dream_id:
             return Comentario.objects.none()
         
-        queryset = Comentario.objects.filter(
+        # Base queryset: all active comments for this dream
+        base_queryset = Comentario.objects.filter(
             publicacao_id=dream_id,
-            status=1,
-            comentario_pai__isnull=True  # Only root comments
+            status=1
         )
+        
+        # For detail actions (retrieve, update, destroy), return ALL comments
+        # This allows deleting/editing nested replies, not just root comments
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'like']:
+            return base_queryset
+        
+        # For list action, only return root comments (children are nested in serializer)
+        queryset = base_queryset.filter(comentario_pai__isnull=True)
         
         # Handle ordering parameter
         ordering = self.request.query_params.get('ordering', 'recent')
@@ -726,6 +734,14 @@ class ComentarioViewSet(viewsets.ModelViewSet):
                 {'error': 'Você só pode excluir seus próprios comentários'},
                 status=status.HTTP_403_FORBIDDEN
             )
+        
+        # Prevent deletion if comment has replies to preserve thread structure
+        if instance.respostas.filter(status=1).exists():
+            return Response(
+                {'error': 'Não é possível excluir um comentário que possui respostas. Exclua as respostas primeiro.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         return super().destroy(request, *args, **kwargs)
 
 
