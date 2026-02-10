@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { likeComment, deleteComment } from '../services/api';
+import { ChildBranch, ParentLine } from './ThreadConnectorSVG';
 
 const CommentDetailModal = ({ 
     isOpen, 
@@ -59,7 +60,7 @@ const CommentDetailModal = ({
     };
 
     // Recursive component to render replies
-    const ReplyItem = ({ reply, depth = 0 }) => {
+    const ReplyItem = ({ reply, depth = 0, isLast = false }) => {
         const [replyLiked, setReplyLiked] = useState(reply.is_liked || false);
         const [replyLikesCount, setReplyLikesCount] = useState(reply.likes_count || 0);
         const replyHasReplies = reply.respostas && reply.respostas.length > 0;
@@ -75,9 +76,15 @@ const CommentDetailModal = ({
         };
 
         return (
-            <div className="border-b border-gray-200 dark:border-white/5">
-                <div className="flex gap-3 p-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                    {/* Avatar with thread line */}
+            <div
+                className="border-b border-gray-200 dark:border-white/5 relative"
+                style={{ marginLeft: depth > 0 ? '9px' : 0 }}
+            >
+                {/* SVG L-CONNECTOR for nested replies */}
+                {depth > 0 && (
+                    <ChildBranch isLast={isLast} indent={10} />
+                )}
+                <div className="flex gap-3 p-4 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors relative">
                     <div className="flex flex-col items-center flex-shrink-0">
                         <Link to={`/user/${reply.usuario?.id_usuario}`}>
                             <img
@@ -86,8 +93,9 @@ const CommentDetailModal = ({
                                 className="w-10 h-10 rounded-full object-cover"
                             />
                         </Link>
+                        {/* SVG Parent-to-children line */}
                         {replyHasReplies && (
-                            <div className="w-0.5 flex-1 bg-gray-600/50 mt-2 rounded-full min-h-[20px]" />
+                            <ParentLine commentId={reply.id_comentario} startY={40} />
                         )}
                     </div>
 
@@ -177,11 +185,12 @@ const CommentDetailModal = ({
                 {/* Nested replies */}
                 {replyHasReplies && depth < 5 && (
                     <div className="pl-[52px]">
-                        {reply.respostas.map(nestedReply => (
+                        {reply.respostas.map((nestedReply, idx) => (
                             <ReplyItem 
                                 key={nestedReply.id_comentario} 
                                 reply={nestedReply} 
                                 depth={depth + 1}
+                                isLast={idx === reply.respostas.length - 1}
                             />
                         ))}
                     </div>

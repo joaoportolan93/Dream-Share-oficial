@@ -82,6 +82,9 @@ const Login = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
+                    <div className="forgot-password-link">
+                        <Link to="/forgot-password">Esqueceu a senha?</Link>
+                    </div>
                     <button
                         type="submit"
                         className="btn-dream"

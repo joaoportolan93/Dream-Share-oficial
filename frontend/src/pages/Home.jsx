@@ -136,7 +136,7 @@ const Home = () => {
                     <p className="text-gray-400 dark:text-gray-500">
                         {activeTab === 'following'
                             ? 'Siga outros sonhadores para ver seus sonhos aqui!'
-                            : 'Volte mais tarde para ver os sonhos em destaque.'
+                            : 'Volte mais tarde para ver os sonhos mais populares.'
                         }
                     </p>
                 </div>

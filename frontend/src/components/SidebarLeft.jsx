@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaHome, FaMoon, FaUserFriends, FaBookmark, FaStar, FaPlus } from 'react-icons/fa';
+import { FaHome, FaMoon, FaUserFriends, FaBookmark, FaPlus } from 'react-icons/fa';
 import { Link, useLocation } from 'react-router-dom';
 
 const SidebarLeft = () => {
@@ -11,7 +11,6 @@ const SidebarLeft = () => {
         { icon: FaMoon, label: 'Explorar', path: '/explore' },
         { icon: FaUserFriends, label: 'Comunidades', path: '/communities' },
         { icon: FaBookmark, label: 'Salvos', path: '/saved' },
-        { icon: FaStar, label: 'Destaques', path: '/highlights' },
     ];
 
     const trends = [

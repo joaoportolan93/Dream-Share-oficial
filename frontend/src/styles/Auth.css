@@ -121,6 +121,31 @@
     text-decoration: underline;
 }
 
+/* Forgot Password Link */
+.forgot-password-link {
+    text-align: right;
+    margin-top: -16px;
+    margin-bottom: 24px;
+}
+
+.forgot-password-link a {
+    color: #a78bfa;
+    font-size: 0.85rem;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.forgot-password-link a:hover {
+    color: #c4b5fd;
+    text-decoration: underline;
+}
+
+/* Success Message */
+.auth-success {
+    padding: 16px 0;
+}
+
 /* ========================================
    Onboarding Specific Styles
    ======================================== */

@@ -8,6 +8,7 @@ import {
 import { FaRegComment, FaRetweet } from 'react-icons/fa6';
 import { deleteComment, editComment, likeComment } from '../services/api';
 import ReplyInput from './ReplyInput';
+import { ChildBranch, ParentLine } from './ThreadConnectorSVG';
 
 /**
  * CommentItem - Reddit-style L-Connectors + Twitter/X Icons
@@ -257,73 +258,29 @@ const CommentItem = ({
         );
     };
 
-    // ===== STYLES FOR L-CONNECTOR =====
-    // The connector is drawn BY THE CHILD, not inherited from parent
-    const connectorStyles = depth > 0 ? {
-        // Vertical line coming from above
-        verticalLine: {
-            position: 'absolute',
-            left: '19px',
-            top: 0,
-            width: '2px',
-            height: isLast ? '24px' : '100%', // Stop at curve if last, else full height
-            background: 'linear-gradient(to bottom, rgba(156,163,175,0.4), rgba(156,163,175,0.25))',
-        },
-        // Horizontal curve pointing to avatar
-        horizontalLine: {
-            position: 'absolute',
-            left: '19px',
-            top: '22px',
-            width: '20px',
-            height: '2px',
-            background: 'rgba(156,163,175,0.4)',
-            borderBottomLeftRadius: '8px',
-        },
-        // Smooth corner piece
-        cornerPiece: {
-            position: 'absolute',
-            left: '19px',
-            top: '12px',
-            width: '12px',
-            height: '12px',
-            borderLeft: '2px solid rgba(156,163,175,0.4)',
-            borderBottom: '2px solid rgba(156,163,175,0.4)',
-            borderBottomLeftRadius: '10px',
-        }
-    } : null;
-
-    // Parent-to-children continuation line
-    const childLineStyle = hasReplies && !isCollapsed ? {
-        position: 'absolute',
-        left: '19px',
-        top: '48px',
-        bottom: 0,
-        width: '2px',
-        background: 'linear-gradient(to bottom, rgba(96,165,250,0.5), rgba(168,85,247,0.35))',
-        borderRadius: '1px',
-    } : null;
+    // ===== SVG CONNECTORS =====
+    // With flat 9px margin per level, the parent's line at 19px is always
+    // at 19 - 9 = 10px from the child's left edge
+    const branchIndent = 10;
 
     // ===== MAIN RENDER =====
     return (
         <div
             className="relative"
-            style={{ marginLeft: depth > 0 ? `${depth * 9}px` : 0 }}
+            style={{ marginLeft: depth > 0 ? '9px' : 0 }}
         >
-            {/* L-CONNECTOR: Drawn by this child (depth > 0) */}
-            {depth > 0 && connectorStyles && (
-                <>
-                    <div style={connectorStyles.verticalLine} className="dark:opacity-60" />
-                    <div style={connectorStyles.horizontalLine} className="dark:opacity-60" />
-                    <div style={connectorStyles.cornerPiece} className="dark:opacity-60" />
-                </>
+            {/* SVG L-CONNECTOR: Drawn by this child (depth > 0) */}
+            {depth > 0 && (
+                <ChildBranch isLast={isLast} indent={branchIndent} />
             )}
+
+            {/* SVG Parent-to-children continuation line — in outer wrapper to extend through children */}
+            {hasReplies && !isCollapsed && <ParentLine commentId={comment.id_comentario} />}
 
             <article
                 className="relative hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
                 id={`comment-${comment.id_comentario}`}
             >
-                {/* Parent-to-children continuation line */}
-                {childLineStyle && <div style={childLineStyle} />}
 
                 <div className="flex gap-3 p-4 relative z-10">
                     {/* AVATAR COLUMN */}
