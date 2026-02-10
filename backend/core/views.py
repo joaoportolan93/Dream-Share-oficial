@@ -299,8 +299,14 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
             usuario_seguidor=user, status=1
         ).values_list('usuario_seguido_id', flat=True)
 
-        # Base filter: exclude posts from banned users (status=2)
-        base_filter = Q(usuario__status=1)  # Only active users
+        # Get blocked user IDs to exclude their posts
+        from .models import Bloqueio
+        blocked_user_ids = Bloqueio.objects.filter(
+            usuario=user
+        ).values_list('usuario_bloqueado_id', flat=True)
+
+        # Base filter: exclude posts from banned users AND blocked users
+        base_filter = Q(usuario__status=1) & ~Q(usuario__in=blocked_user_ids)
 
         if self.action == 'list':
             tab = self.request.query_params.get('tab', 'following')
@@ -325,6 +331,67 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
                         base_filter,
                         comunidade_id=community_id
                     ).order_by('-data_publicacao')
+
+            if tab == 'my_community_posts':
+                # My Community Posts: Only current user's posts in communities
+                return Publicacao.objects.filter(
+                    usuario=user,
+                    comunidade__isnull=False
+                ).order_by('-data_publicacao')
+
+            if tab == 'user_posts':
+                # Specific user's feed posts (no community posts)
+                user_id = self.request.query_params.get('user_id')
+                if user_id:
+                    target_user = get_object_or_404(User, pk=user_id)
+                    # Respect privacy
+                    is_private = target_user.privacidade_padrao == 2
+                    is_following = int(user_id) in list(following_ids)
+                    is_self = int(user_id) == user.id_usuario
+                    if is_private and not is_following and not is_self:
+                        return Publicacao.objects.none()
+                    return Publicacao.objects.filter(
+                        base_filter,
+                        usuario_id=user_id,
+                        comunidade__isnull=True
+                    ).order_by('-data_publicacao')
+
+            if tab == 'user_community_posts':
+                # Specific user's community posts
+                user_id = self.request.query_params.get('user_id')
+                if user_id:
+                    target_user = get_object_or_404(User, pk=user_id)
+                    is_private = target_user.privacidade_padrao == 2
+                    is_following = int(user_id) in list(following_ids)
+                    is_self = int(user_id) == user.id_usuario
+                    if is_private and not is_following and not is_self:
+                        return Publicacao.objects.none()
+                    return Publicacao.objects.filter(
+                        base_filter,
+                        usuario_id=user_id,
+                        comunidade__isnull=False
+                    ).order_by('-data_publicacao')
+
+            if tab == 'user_media':
+                # Posts with media (images). Optional user_id filter.
+                user_id = self.request.query_params.get('user_id')
+                media_filter = Q(imagem__isnull=False) & ~Q(imagem='')
+                if user_id:
+                    target_user = get_object_or_404(User, pk=user_id)
+                    is_private = target_user.privacidade_padrao == 2
+                    is_following = int(user_id) in list(following_ids)
+                    is_self = int(user_id) == user.id_usuario
+                    if is_private and not is_following and not is_self:
+                        return Publicacao.objects.none()
+                    return Publicacao.objects.filter(
+                        base_filter,
+                        usuario_id=user_id
+                    ).filter(media_filter).order_by('-data_publicacao')
+                else:
+                    # Own media posts
+                    return Publicacao.objects.filter(
+                        usuario=user
+                    ).filter(media_filter).order_by('-data_publicacao')
 
             if tab == 'foryou':
                 # For You: Public dreams ordered by engagement (likes + comments)
@@ -467,6 +534,17 @@ class FollowView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Can't follow a blocked user or a user who blocked you
+        from .models import Bloqueio
+        if Bloqueio.objects.filter(
+            Q(usuario=request.user, usuario_bloqueado=user_to_follow) |
+            Q(usuario=user_to_follow, usuario_bloqueado=request.user)
+        ).exists():
+            return Response(
+                {'error': 'Não é possível seguir este usuário'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         # Check if already following or pending
         existing = Seguidor.objects.filter(
             usuario_seguidor=request.user,
@@ -560,6 +638,76 @@ class FollowView(APIView):
             'message': f'Você deixou de seguir {user_to_unfollow.nome_usuario}' if not was_pending else 'Solicitação cancelada',
             'follow_status': 'none'
         }, status=status.HTTP_200_OK)
+
+
+class BlockView(APIView):
+    """Views for blocking/unblocking users"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, pk):
+        """Block a user"""
+        user_to_block = get_object_or_404(User, pk=pk)
+        
+        if request.user.id_usuario == pk:
+            return Response({'error': 'Você não pode bloquear a si mesmo'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if already blocked
+        from .models import Bloqueio
+        if Bloqueio.objects.filter(usuario=request.user, usuario_bloqueado=user_to_block).exists():
+            return Response({'message': 'Usuário já está bloqueado'}, status=status.HTTP_200_OK)
+        
+        # Create block
+        Bloqueio.objects.create(usuario=request.user, usuario_bloqueado=user_to_block)
+        
+        # Also unfollow if following
+        Seguidor.objects.filter(usuario_seguidor=request.user, usuario_seguido=user_to_block).delete()
+        Seguidor.objects.filter(usuario_seguidor=user_to_block, usuario_seguido=request.user).delete()
+        
+        return Response({'message': f'Você bloqueou {user_to_block.nome_usuario}'}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        """Unblock a user"""
+        user_to_unblock = get_object_or_404(User, pk=pk)
+        
+        from .models import Bloqueio
+        deleted, _ = Bloqueio.objects.filter(usuario=request.user, usuario_bloqueado=user_to_unblock).delete()
+        
+        if not deleted:
+            return Response({'error': 'Este usuário não está bloqueado'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response({'message': f'Você desbloqueou {user_to_unblock.nome_usuario}'}, status=status.HTTP_200_OK)
+
+
+class MuteView(APIView):
+    """Views for muting/unmuting users"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, pk):
+        """Mute a user"""
+        user_to_mute = get_object_or_404(User, pk=pk)
+        
+        if request.user.id_usuario == pk:
+            return Response({'error': 'Você não pode silenciar a si mesmo'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from .models import Silenciamento
+        if Silenciamento.objects.filter(usuario=request.user, usuario_silenciado=user_to_mute).exists():
+            return Response({'message': 'Usuário já está silenciado'}, status=status.HTTP_200_OK)
+        
+        Silenciamento.objects.create(usuario=request.user, usuario_silenciado=user_to_mute)
+        
+        return Response({'message': f'Você silenciou {user_to_mute.nome_usuario}'}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        """Unmute a user"""
+        user_to_unmute = get_object_or_404(User, pk=pk)
+        
+        from .models import Silenciamento
+        deleted, _ = Silenciamento.objects.filter(usuario=request.user, usuario_silenciado=user_to_unmute).delete()
+        
+        if not deleted:
+            return Response({'error': 'Este usuário não está silenciado'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response({'message': f'Você deixou de silenciar {user_to_unmute.nome_usuario}'}, status=status.HTTP_200_OK)
 
 
 class FollowRequestsView(APIView):
@@ -1294,11 +1442,26 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         return {'request': self.request}
 
     def get_queryset(self):
-        """Filter communities - can filter to only show member communities"""
+        """Filter communities - supports member, user_id, and role filters"""
         queryset = Comunidade.objects.all().order_by('-data_criacao')
-        if self.request.query_params.get('member') == 'true':
+        
+        user_id = self.request.query_params.get('user_id')
+        role = self.request.query_params.get('role')
+        
+        if user_id:
+            # Filter communities a specific user belongs to
+            queryset = queryset.filter(membrocomunidade__usuario_id=user_id)
+            if role:
+                # Filter by role(s), e.g. "admin,moderator"
+                roles = [r.strip() for r in role.split(',')]
+                queryset = queryset.filter(membrocomunidade__usuario_id=user_id, membrocomunidade__role__in=roles)
+        elif self.request.query_params.get('member') == 'true':
             queryset = queryset.filter(membros=self.request.user)
-        return queryset
+            if role:
+                roles = [r.strip() for r in role.split(',')]
+                queryset = queryset.filter(membrocomunidade__usuario=self.request.user, membrocomunidade__role__in=roles)
+        
+        return queryset.distinct()
 
     def perform_create(self, serializer):
         """Create community and add creator as ADMIN"""

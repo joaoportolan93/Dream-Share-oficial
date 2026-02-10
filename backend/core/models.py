@@ -473,3 +473,28 @@ class Rascunho(models.Model):
 
     def __str__(self):
         return f"Rascunho de {self.usuario.username} - {self.titulo or 'Sem título'}"
+
+
+class Bloqueio(models.Model):
+    """Blocked users - blocked user's content is hidden from the blocker"""
+    id_bloqueio = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='bloqueios_feitos', db_column='id_usuario')
+    usuario_bloqueado = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='bloqueios_recebidos', db_column='id_usuario_bloqueado')
+    data_bloqueio = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'bloqueios'
+        unique_together = ('usuario', 'usuario_bloqueado')
+
+
+class Silenciamento(models.Model):
+    """Muted users - muted user's content is deprioritized/hidden from feed"""
+    id_silenciamento = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='silenciamentos_feitos', db_column='id_usuario')
+    usuario_silenciado = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='silenciamentos_recebidos', db_column='id_usuario_silenciado')
+    data_silenciamento = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'silenciamentos'
+        unique_together = ('usuario', 'usuario_silenciado')
+

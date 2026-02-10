@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake, FaMoon, FaLock } from 'react-icons/fa';
-import { getProfile, getMyDreams, getDreams, getMyCommunityPosts } from '../services/api';
+import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake, FaMoon, FaLock, FaImage, FaUsers, FaCrown, FaShieldAlt } from 'react-icons/fa';
+import { getProfile, getMyDreams, getDreams, getMyCommunityPosts, getMyMediaPosts, getUserCommunities, getMyAdminCommunities } from '../services/api';
 import DreamCard from '../components/DreamCard';
 
 const Profile = () => {
@@ -14,6 +14,13 @@ const Profile = () => {
     const [savedLoading, setSavedLoading] = useState(false);
     const [communityPosts, setCommunityPosts] = useState([]);
     const [communityLoading, setCommunityLoading] = useState(false);
+    const [mediaPosts, setMediaPosts] = useState([]);
+    const [mediaLoading, setMediaLoading] = useState(false);
+    const [communitySubTab, setCommunitySubTab] = useState('posts');
+    const [memberCommunities, setMemberCommunities] = useState([]);
+    const [memberCommLoading, setMemberCommLoading] = useState(false);
+    const [adminCommunities, setAdminCommunities] = useState([]);
+    const [adminCommLoading, setAdminCommLoading] = useState(false);
 
     useEffect(() => {
         if (activeTab === 'saved' && savedDreams.length === 0) {
@@ -33,7 +40,7 @@ const Profile = () => {
     }, [activeTab]);
 
     useEffect(() => {
-        if (activeTab === 'communities' && communityPosts.length === 0) {
+        if (activeTab === 'communities' && communitySubTab === 'posts' && communityPosts.length === 0) {
             const fetchCommunityPosts = async () => {
                 setCommunityLoading(true);
                 try {
@@ -46,6 +53,51 @@ const Profile = () => {
                 }
             };
             fetchCommunityPosts();
+        }
+        if (activeTab === 'communities' && communitySubTab === 'member' && memberCommunities.length === 0) {
+            const fetchMemberComms = async () => {
+                setMemberCommLoading(true);
+                try {
+                    const res = await getUserCommunities();
+                    setMemberCommunities(res.data);
+                } catch (error) {
+                    console.error('Error fetching member communities:', error);
+                } finally {
+                    setMemberCommLoading(false);
+                }
+            };
+            fetchMemberComms();
+        }
+        if (activeTab === 'communities' && communitySubTab === 'admin' && adminCommunities.length === 0) {
+            const fetchAdminComms = async () => {
+                setAdminCommLoading(true);
+                try {
+                    const res = await getMyAdminCommunities();
+                    setAdminCommunities(res.data);
+                } catch (error) {
+                    console.error('Error fetching admin communities:', error);
+                } finally {
+                    setAdminCommLoading(false);
+                }
+            };
+            fetchAdminComms();
+        }
+    }, [activeTab, communitySubTab]);
+
+    useEffect(() => {
+        if (activeTab === 'media' && mediaPosts.length === 0) {
+            const fetchMediaPosts = async () => {
+                setMediaLoading(true);
+                try {
+                    const res = await getMyMediaPosts();
+                    setMediaPosts(res.data);
+                } catch (error) {
+                    console.error('Error fetching media posts:', error);
+                } finally {
+                    setMediaLoading(false);
+                }
+            };
+            fetchMediaPosts();
         }
     }, [activeTab]);
 
@@ -171,9 +223,7 @@ const Profile = () => {
                                 <FaEdit />
                                 Editar Perfil
                             </Link>
-                            <button className="flex items-center gap-2 px-4 py-3 bg-white/20 backdrop-blur-sm rounded-full transition-transform hover:-translate-y-0.5">
-                                <FaEllipsisH />
-                            </button>
+
                         </div>
                     </div>
                 </div>
@@ -200,6 +250,15 @@ const Profile = () => {
                         onClick={() => setActiveTab('communities')}
                     >
                         Comunidades
+                    </button>
+                    <button
+                        className={`px-6 py-4 text-base transition-colors ${activeTab === 'media'
+                            ? 'border-b-4 border-purple-500 text-purple-400 font-semibold'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-purple-400'
+                            }`}
+                        onClick={() => setActiveTab('media')}
+                    >
+                        Mídia
                     </button>
                     <button
                         className={`px-6 py-4 text-base transition-colors ${activeTab === 'saved'
@@ -253,13 +312,155 @@ const Profile = () => {
                 {/* Communities Tab Content */}
                 {activeTab === 'communities' && (
                     <>
-                        {communityLoading ? (
+                        {/* Community Sub-Tabs */}
+                        <div className="flex gap-2 mb-6">
+                            {[{ key: 'posts', label: 'Posts' }, { key: 'member', label: 'Membro' }, { key: 'admin', label: 'Admin/Mod' }].map(sub => (
+                                <button
+                                    key={sub.key}
+                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${communitySubTab === sub.key
+                                        ? 'bg-purple-500 text-white shadow-lg'
+                                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                        }`}
+                                    onClick={() => setCommunitySubTab(sub.key)}
+                                >
+                                    {sub.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Posts Sub-Tab */}
+                        {communitySubTab === 'posts' && (
+                            communityLoading ? (
+                                <div className="flex justify-center py-12">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                                </div>
+                            ) : communityPosts.length > 0 ? (
+                                <div className="flex flex-col gap-4">
+                                    {communityPosts.map(post => (
+                                        <DreamCard
+                                            key={post.id_publicacao}
+                                            dream={post}
+                                            currentUserId={user?.id_usuario}
+                                            onDelete={handleDeleteDream}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">Nenhum post em comunidades ainda.</p>
+                                    <p className="text-gray-400 dark:text-gray-500">Participe de comunidades e crie posts para vê-los aqui!</p>
+                                </div>
+                            )
+                        )}
+
+                        {/* Member Sub-Tab */}
+                        {communitySubTab === 'member' && (
+                            memberCommLoading ? (
+                                <div className="flex justify-center py-12">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                                </div>
+                            ) : memberCommunities.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {memberCommunities.map(comm => (
+                                        <Link
+                                            key={comm.id_comunidade}
+                                            to={`/community/${comm.id_comunidade}`}
+                                            className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all hover:shadow-lg group"
+                                        >
+                                            <img
+                                                src={comm.imagem || 'https://via.placeholder.com/60?text=C'}
+                                                alt={comm.nome}
+                                                className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-semibold text-gray-900 dark:text-white truncate group-hover:text-purple-400 transition-colors">{comm.nome}</h4>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    <FaUsers className="inline mr-1" />
+                                                    {comm.membros_count || 0} membros
+                                                </p>
+                                            </div>
+                                            {comm.user_role && (
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 ${comm.user_role === 'admin'
+                                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                    : comm.user_role === 'moderator'
+                                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                                                    }`}>
+                                                    {comm.user_role === 'admin' && <><FaCrown className="inline mr-1" />Admin</>}
+                                                    {comm.user_role === 'moderator' && <><FaShieldAlt className="inline mr-1" />Mod</>}
+                                                    {comm.user_role === 'member' && 'Membro'}
+                                                </span>
+                                            )}
+                                        </Link>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <FaUsers className="text-6xl text-gray-500 dark:text-gray-600 mx-auto mb-4" />
+                                    <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">Você não participa de nenhuma comunidade.</p>
+                                    <Link to="/communities" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:opacity-90 transition-all">
+                                        Explorar comunidades
+                                    </Link>
+                                </div>
+                            )
+                        )}
+
+                        {/* Admin/Mod Sub-Tab */}
+                        {communitySubTab === 'admin' && (
+                            adminCommLoading ? (
+                                <div className="flex justify-center py-12">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                                </div>
+                            ) : adminCommunities.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {adminCommunities.map(comm => (
+                                        <Link
+                                            key={comm.id_comunidade}
+                                            to={`/community/${comm.id_comunidade}`}
+                                            className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all hover:shadow-lg group"
+                                        >
+                                            <img
+                                                src={comm.imagem || 'https://via.placeholder.com/60?text=C'}
+                                                alt={comm.nome}
+                                                className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-semibold text-gray-900 dark:text-white truncate group-hover:text-purple-400 transition-colors">{comm.nome}</h4>
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                    <FaUsers className="inline mr-1" />
+                                                    {comm.membros_count || 0} membros
+                                                </p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 ${comm.user_role === 'admin'
+                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                }`}>
+                                                {comm.user_role === 'admin' ? <><FaCrown className="inline mr-1" />Admin</> : <><FaShieldAlt className="inline mr-1" />Mod</>}
+                                            </span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <FaCrown className="text-6xl text-gray-500 dark:text-gray-600 mx-auto mb-4" />
+                                    <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">Você não administra nenhuma comunidade.</p>
+                                    <p className="text-gray-400 dark:text-gray-500">Crie ou seja promovido em uma comunidade para aparecer aqui.</p>
+                                </div>
+                            )
+                        )}
+                    </>
+                )}
+
+                {/* Media Tab Content */}
+                {activeTab === 'media' && (
+                    <>
+                        {mediaLoading ? (
                             <div className="flex justify-center py-12">
                                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                             </div>
-                        ) : communityPosts.length > 0 ? (
+                        ) : mediaPosts.length > 0 ? (
                             <div className="flex flex-col gap-4">
-                                {communityPosts.map(post => (
+                                {mediaPosts.map(post => (
                                     <DreamCard
                                         key={post.id_publicacao}
                                         dream={post}
@@ -270,11 +471,12 @@ const Profile = () => {
                             </div>
                         ) : (
                             <div className="text-center py-12">
+                                <FaImage className="text-6xl text-gray-500 dark:text-gray-600 mx-auto mb-4" />
                                 <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-                                    Nenhum post em comunidades ainda.
+                                    Nenhum post com mídia ainda.
                                 </p>
                                 <p className="text-gray-400 dark:text-gray-500">
-                                    Participe de comunidades e crie posts para vê-los aqui!
+                                    Posts com imagens, vídeos e GIFs aparecerão aqui!
                                 </p>
                             </div>
                         )}

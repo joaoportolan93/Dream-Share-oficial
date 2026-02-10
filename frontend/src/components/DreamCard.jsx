@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag, FaBookmark, FaRegBookmark } from 'react-icons/fa';
-import { deleteDream, likeDream, saveDream } from '../services/api';
+import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag, FaBookmark, FaRegBookmark, FaUserPlus, FaUserCheck, FaBan, FaVolumeMute } from 'react-icons/fa';
+import { deleteDream, likeDream, saveDream, followUser, unfollowUser, blockUser, unblockUser, muteUser, unmuteUser } from '../services/api';
 import { AnimatePresence } from 'framer-motion';
 import CommentSection from './CommentSection';
 import ReportModal from './ReportModal';
@@ -19,6 +19,12 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [saved, setSaved] = useState(dream.is_saved || false);
     const [saving, setSaving] = useState(false);
+
+    // Social actions state
+    const [isFollowing, setIsFollowing] = useState(dream.usuario?.is_following || false);
+    const [isBlocked, setIsBlocked] = useState(dream.usuario?.is_blocked || false);
+    const [isMuted, setIsMuted] = useState(dream.usuario?.is_muted || false);
+
 
     const isOwner = dream.usuario?.id_usuario === currentUserId;
 
@@ -95,6 +101,49 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
         }
     };
 
+    const handleFollowToggle = async () => {
+        if (!dream.usuario?.id_usuario) return;
+        const prev = isFollowing;
+        setIsFollowing(!prev);
+        try {
+            if (prev) await unfollowUser(dream.usuario.id_usuario);
+            else await followUser(dream.usuario.id_usuario);
+        } catch (err) {
+            console.error('Error toggling follow:', err);
+            setIsFollowing(prev);
+        }
+        setShowMenu(false);
+    };
+
+    const handleBlockToggle = async () => {
+        if (!window.confirm(isBlocked ? 'Desbloquear usuário?' : 'Bloquear usuário? Seus posts não aparecerão mais para você.')) return;
+        if (!dream.usuario?.id_usuario) return;
+        const prev = isBlocked;
+        setIsBlocked(!prev);
+        try {
+            if (prev) await unblockUser(dream.usuario.id_usuario);
+            else await blockUser(dream.usuario.id_usuario);
+        } catch (err) {
+            console.error('Error toggling block:', err);
+            setIsBlocked(prev);
+        }
+        setShowMenu(false);
+    };
+
+    const handleMuteToggle = async () => {
+        if (!dream.usuario?.id_usuario) return;
+        const prev = isMuted;
+        setIsMuted(!prev);
+        try {
+            if (prev) await unmuteUser(dream.usuario.id_usuario);
+            else await muteUser(dream.usuario.id_usuario);
+        } catch (err) {
+            console.error('Error toggling mute:', err);
+            setIsMuted(prev);
+        }
+        setShowMenu(false);
+    };
+
     const tipoSonhoColors = {
         'Lúcido': 'bg-purple-500',
         'Pesadelo': 'bg-red-500',
@@ -108,23 +157,23 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
 
     const markdownComponents = useMemo(() => ({
         // Custom link styling
-        a: ({children, href, ...props}) => (
+        a: ({ children, href, ...props }) => (
             <a href={href} {...props} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                 {children}
             </a>
         ),
         // Prevent h1-h6 from being too large
-        h1: ({children, ...props}) => <h4 {...props} className="text-lg font-bold mt-2">{children}</h4>,
-        h2: ({children, ...props}) => <h4 {...props} className="text-base font-bold mt-2">{children}</h4>,
-        h3: ({children, ...props}) => <h5 {...props} className="text-sm font-bold mt-2">{children}</h5>,
+        h1: ({ children, ...props }) => <h4 {...props} className="text-lg font-bold mt-2">{children}</h4>,
+        h2: ({ children, ...props }) => <h4 {...props} className="text-base font-bold mt-2">{children}</h4>,
+        h3: ({ children, ...props }) => <h5 {...props} className="text-sm font-bold mt-2">{children}</h5>,
         // Code block styling
-        code: ({inline, children, ...props}) => (
-            inline 
+        code: ({ inline, children, ...props }) => (
+            inline
                 ? <code {...props} className="bg-gray-800 px-1 py-0.5 rounded text-sm text-pink-400">{children}</code>
                 : <code {...props} className="block bg-gray-800 p-3 rounded text-sm overflow-x-auto">{children}</code>
         ),
         // Blockquote styling
-        blockquote: ({children, ...props}) => (
+        blockquote: ({ children, ...props }) => (
             <blockquote {...props} className="border-l-4 border-blue-500 pl-4 italic text-gray-400">{children}</blockquote>
         ),
     }), []);
@@ -163,6 +212,18 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                             @{dream.usuario?.nome_usuario} · {formatDate(dream.data_publicacao)}
                         </p>
+                        {dream.comunidade_id && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Post feito na comunidade{' '}
+                                <Link
+                                    to={`/community/${dream.comunidade_id}`}
+                                    className="text-purple-500 hover:text-purple-400 font-semibold hover:underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {dream.comunidade_nome}
+                                </Link>
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -194,12 +255,32 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                                 </>
                             )}
                             {!isOwner && (
-                                <button
-                                    onClick={() => { setShowReportModal(true); setShowMenu(false); }}
-                                    className="w-full flex items-center gap-2 px-4 py-3 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                                >
-                                    <FaFlag /> Denunciar
-                                </button>
+                                <>
+                                    <button
+                                        onClick={handleFollowToggle}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                                    >
+                                        {isFollowing ? <><FaUserCheck /> Seguindo</> : <><FaUserPlus /> Seguir</>}
+                                    </button>
+                                    <button
+                                        onClick={handleMuteToggle}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                                    >
+                                        <FaVolumeMute /> {isMuted ? 'Desativar silêncio' : 'Silenciar'}
+                                    </button>
+                                    <button
+                                        onClick={handleBlockToggle}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                    >
+                                        <FaBan /> {isBlocked ? 'Desbloquear' : 'Bloquear'}
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowReportModal(true); setShowMenu(false); }}
+                                        className="w-full flex items-center gap-2 px-4 py-3 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                                    >
+                                        <FaFlag /> Denunciar
+                                    </button>
+                                </>
                             )}
                         </div>
                     )}

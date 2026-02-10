@@ -88,6 +88,14 @@ export const getMyDreams = () => api.get('/api/dreams/?tab=mine');
 
 export const getMyCommunityPosts = () => api.get('/api/dreams/?tab=my_community_posts');
 
+export const getUserPosts = (userId) => api.get(`/api/dreams/?tab=user_posts&user_id=${userId}`);
+
+export const getUserCommunityPosts = (userId) => api.get(`/api/dreams/?tab=user_community_posts&user_id=${userId}`);
+
+export const getUserMediaPosts = (userId) => api.get(`/api/dreams/?tab=user_media&user_id=${userId}`);
+
+export const getMyMediaPosts = () => api.get('/api/dreams/?tab=user_media');
+
 export const createDream = (data) => api.post('/api/dreams/', data);
 
 export const getDream = (id) => api.get(`/api/dreams/${id}/`);
@@ -102,8 +110,13 @@ export const saveDream = (id) => api.post(`/api/dreams/${id}/save/`);
 
 // Follow endpoints
 export const followUser = (userId) => api.post(`/api/users/${userId}/follow/`);
-
 export const unfollowUser = (userId) => api.delete(`/api/users/${userId}/follow/`);
+
+// Block/Mute endpoints
+export const blockUser = (userId) => api.post(`/api/users/${userId}/block/`);
+export const unblockUser = (userId) => api.delete(`/api/users/${userId}/block/`);
+export const muteUser = (userId) => api.post(`/api/users/${userId}/mute/`);
+export const unmuteUser = (userId) => api.delete(`/api/users/${userId}/mute/`);
 
 export const getSuggestedUsers = () => api.get('/api/users/suggested/');
 
@@ -160,6 +173,9 @@ export const rejectFollowRequest = (userId) => api.post(`/api/follow-requests/${
 // Community endpoints
 export const getCommunities = () => api.get('/api/communities/');
 export const getUserCommunities = () => api.get('/api/communities/?member=true');
+export const getUserMemberCommunities = (userId) => api.get(`/api/communities/?user_id=${userId}`);
+export const getUserAdminCommunities = (userId) => api.get(`/api/communities/?user_id=${userId}&role=admin,moderator`);
+export const getMyAdminCommunities = () => api.get('/api/communities/?member=true&role=admin,moderator');
 export const createCommunity = (data) => api.post('/api/communities/', data);
 export const getCommunity = (id) => api.get(`/api/communities/${id}/`);
 export const joinCommunity = (id) => api.post(`/api/communities/${id}/join/`);
