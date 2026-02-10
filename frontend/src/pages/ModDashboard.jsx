@@ -49,7 +49,7 @@ const ModDashboard = () => {
         if (!banTarget) return;
         setBanning(true);
         try {
-            await banCommunityMember(id, banTarget.usuario_id || banTarget.id, banReason);
+            await banCommunityMember(id, banTarget.id_usuario, banReason);
             setShowBanModal(false);
             setBanTarget(null);
             setBanReason('');
