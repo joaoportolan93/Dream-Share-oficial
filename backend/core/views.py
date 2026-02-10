@@ -1250,6 +1250,7 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
             community.imagem.delete(save=False)
 
         # Generate filename and save using Django's storage system
+        # Note: ImageField's upload_to='community_images/' will prepend the directory automatically
         filename = f"community_icon_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
         community.imagem.save(filename, file, save=True)
 
@@ -1277,6 +1278,7 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
             community.banner.delete(save=False)
 
         # Generate filename and save using Django's storage system
+        # Note: ImageField's upload_to='community_banners/' will prepend the directory automatically
         filename = f"community_banner_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
         community.banner.save(filename, file, save=True)
 
