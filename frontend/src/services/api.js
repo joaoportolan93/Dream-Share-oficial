@@ -54,6 +54,8 @@ export const logout = async () => {
     }
 };
 
+export const passwordReset = (data) => api.post('/api/auth/password-reset/', data);
+
 // Profile endpoints
 export const getProfile = () => api.get('/api/profile/');
 
