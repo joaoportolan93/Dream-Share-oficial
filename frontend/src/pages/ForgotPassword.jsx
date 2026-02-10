@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
+import { passwordReset } from '../services/api';
 import '../styles/Auth.css';
 
 const ForgotPassword = () => {
@@ -31,7 +31,7 @@ const ForgotPassword = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://127.0.0.1:8000/api/auth/password-reset/', {
+            await passwordReset({
                 email,
                 nome_usuario: nomeUsuario,
                 new_password: newPassword,
