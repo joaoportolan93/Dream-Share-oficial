@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import models, transaction
 import os
 import uuid
 from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, LogoutSerializer, PasswordResetSerializer
@@ -1245,14 +1245,16 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         if not valid:
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Delete old image if it exists
-        if community.imagem:
-            community.imagem.delete(save=False)
+        # Use transaction to ensure atomicity
+        with transaction.atomic():
+            # Delete old image if it exists
+            if community.imagem:
+                community.imagem.delete(save=False)
 
-        # Generate filename and save using Django's storage system
-        # Note: ImageField's upload_to='community_images/' will prepend the directory automatically
-        filename = f"community_icon_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
-        community.imagem.save(filename, file, save=True)
+            # Generate filename and save using Django's storage system
+            # Note: ImageField's upload_to='community_images/' will prepend the directory automatically
+            filename = f"community_icon_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
+            community.imagem.save(filename, file, save=True)
 
         # Build absolute URL for response
         image_url = request.build_absolute_uri(community.imagem.url)
@@ -1273,14 +1275,16 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         if not valid:
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Delete old banner if it exists
-        if community.banner:
-            community.banner.delete(save=False)
+        # Use transaction to ensure atomicity
+        with transaction.atomic():
+            # Delete old banner if it exists
+            if community.banner:
+                community.banner.delete(save=False)
 
-        # Generate filename and save using Django's storage system
-        # Note: ImageField's upload_to='community_banners/' will prepend the directory automatically
-        filename = f"community_banner_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
-        community.banner.save(filename, file, save=True)
+            # Generate filename and save using Django's storage system
+            # Note: ImageField's upload_to='community_banners/' will prepend the directory automatically
+            filename = f"community_banner_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
+            community.banner.save(filename, file, save=True)
 
         # Build absolute URL for response
         banner_url = request.build_absolute_uri(community.banner.url)
