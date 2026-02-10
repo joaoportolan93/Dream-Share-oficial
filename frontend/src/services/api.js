@@ -54,6 +54,8 @@ export const logout = async () => {
     }
 };
 
+export const passwordReset = (data) => api.post('/api/auth/password-reset/', data);
+
 // Profile endpoints
 export const getProfile = () => api.get('/api/profile/');
 
@@ -166,6 +168,27 @@ export const getCommunityStats = (id) => api.get(`/api/communities/${id}/moderat
 export const getCommunityMembers = (id) => api.get(`/api/communities/${id}/members/`);
 export const manageCommunityRole = (id, userId, role) => api.post(`/api/communities/${id}/manage-role/`, { user_id: userId, role });
 export const deleteCommunity = (id) => api.delete(`/api/communities/${id}/`);
+export const updateCommunity = (id, data) => api.patch(`/api/communities/${id}/`, data);
+export const banCommunityMember = (id, userId, motivo = '') => api.post(`/api/communities/${id}/ban-member/`, { user_id: userId, motivo });
+export const unbanCommunityMember = (id, userId) => api.post(`/api/communities/${id}/unban-member/`, { user_id: userId });
+export const getBannedMembers = (id) => api.get(`/api/communities/${id}/banned-members/`);
+export const inviteModerator = (id, userId) => api.post(`/api/communities/${id}/invite-moderator/`, { user_id: userId });
+
+export const uploadCommunityIcon = (id, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.post(`/api/communities/${id}/upload-icon/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+};
+
+export const uploadCommunityBanner = (id, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.post(`/api/communities/${id}/upload-banner/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+};
 
 // Drafts endpoints
 export const getDrafts = () => api.get('/api/drafts/');

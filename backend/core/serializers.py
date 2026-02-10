@@ -89,6 +89,31 @@ class LogoutSerializer(serializers.Serializer):
             self.fail('bad_token')
 
 
+class PasswordResetSerializer(serializers.Serializer):
+    """Serializer for password reset - verifies identity via email + username"""
+    email = serializers.EmailField()
+    nome_usuario = serializers.CharField()
+    new_password = serializers.CharField(min_length=6, write_only=True)
+
+    def validate(self, attrs):
+        email = attrs.get('email', '').lower()
+        nome_usuario = attrs.get('nome_usuario', '')
+        try:
+            user = User.objects.get(email__iexact=email, nome_usuario=nome_usuario)
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                'Não foi possível verificar sua identidade. Verifique o email e nome de usuário.'
+            )
+        attrs['user'] = user
+        return attrs
+
+    def save(self, **kwargs):
+        user = self.validated_data['user']
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
+
+
 # Dream (Publicacao) Serializers
 from .models import Publicacao
 
@@ -399,7 +424,7 @@ class ComunidadeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comunidade
-        fields = ('id_comunidade', 'nome', 'descricao', 'imagem', 'regras', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'is_admin', 'user_role', 'moderators')
+        fields = ('id_comunidade', 'nome', 'descricao', 'imagem', 'banner', 'regras', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'is_admin', 'user_role', 'moderators')
         read_only_fields = ('id_comunidade', 'data_criacao', 'membros_count', 'is_member', 'is_moderator', 'is_admin', 'user_role', 'moderators')
 
     def get_membros_count(self, obj):
@@ -477,6 +502,26 @@ class CommunityStatsSerializer(serializers.Serializer):
     
     # Queer/Reports
     pending_reports = serializers.IntegerField()
+
+
+class BanimentoComunidadeSerializer(serializers.Serializer):
+    """Serializer for community bans"""
+    id_ban = serializers.IntegerField()
+    user_id = serializers.IntegerField(source='usuario.id_usuario')
+    username = serializers.CharField(source='usuario.nome_usuario')
+    nome_completo = serializers.CharField(source='usuario.nome_completo')
+    avatar_url = serializers.SerializerMethodField()
+    moderador_username = serializers.CharField(source='moderador.nome_usuario', default=None)
+    motivo = serializers.CharField()
+    data_ban = serializers.DateTimeField()
+
+    def get_avatar_url(self, obj):
+        if obj.usuario.avatar_url:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.usuario.avatar_url)
+            return obj.usuario.avatar_url
+        return None
 
 
 # Rascunho (Draft) Serializer

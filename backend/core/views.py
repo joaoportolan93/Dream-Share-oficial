@@ -1,14 +1,14 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import models, transaction
 import os
 import uuid
-from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, LogoutSerializer
+from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, LogoutSerializer, PasswordResetSerializer
 from .throttles import LoginRateThrottle, RegisterRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -174,6 +174,20 @@ class LogoutView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response({'message': 'Logout realizado com sucesso'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PasswordResetView(APIView):
+    """Reset password by verifying identity via email + username"""
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {'message': 'Senha redefinida com sucesso!'},
+                status=status.HTTP_200_OK
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AvatarUploadView(APIView):
@@ -1186,14 +1200,95 @@ class ToggleCloseFriendView(APIView):
 # COMMUNITIES VIEWS
 # ==========================================
 
-from .models import Comunidade, MembroComunidade
-from .serializers import ComunidadeSerializer, CommunityStatsSerializer
+from .models import Comunidade, MembroComunidade, BanimentoComunidade
+from .serializers import ComunidadeSerializer, CommunityStatsSerializer, BanimentoComunidadeSerializer
 
 class ComunidadeViewSet(viewsets.ModelViewSet):
     """ViewSet for communities"""
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ComunidadeSerializer
     queryset = Comunidade.objects.all()
+    parser_classes = (MultiPartParser, FormParser, JSONParser,)
+
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+
+    def _validate_image(self, file):
+        """Validate uploaded image file"""
+        ext = file.name.split('.')[-1].lower()
+        if ext not in self.ALLOWED_EXTENSIONS:
+            return False, f'Formato não permitido. Use: {", ".join(self.ALLOWED_EXTENSIONS)}'
+        if file.size > self.MAX_FILE_SIZE:
+            return False, 'Arquivo muito grande. Máximo: 5MB'
+        return True, ext
+
+    def _check_moderator(self, request, community):
+        """Check if user is moderator/admin of this community"""
+        return MembroComunidade.objects.filter(
+            comunidade=community,
+            usuario=request.user,
+            role__in=['moderator', 'admin']
+        ).exists() or request.user.is_admin
+
+    @action(detail=True, methods=['post'], url_path='upload-icon')
+    def upload_icon(self, request, pk=None):
+        """Upload community icon image (moderators only)"""
+        community = self.get_object()
+        if not self._check_moderator(request, community):
+            return Response({'error': 'Apenas moderadores podem alterar o ícone'}, status=status.HTTP_403_FORBIDDEN)
+
+        if 'image' not in request.FILES:
+            return Response({'error': 'Nenhum arquivo enviado'}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES['image']
+        valid, result = self._validate_image(file)
+        if not valid:
+            return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Use transaction to ensure atomicity
+        with transaction.atomic():
+            # Delete old image if it exists
+            if community.imagem:
+                community.imagem.delete(save=False)
+
+            # Generate filename and save using Django's storage system
+            # Note: ImageField's upload_to='community_images/' will prepend the directory automatically
+            filename = f"community_icon_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
+            community.imagem.save(filename, file, save=True)
+
+        # Build absolute URL for response
+        image_url = request.build_absolute_uri(community.imagem.url)
+        return Response({'message': 'Ícone atualizado!', 'imagem': image_url}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='upload-banner')
+    def upload_banner(self, request, pk=None):
+        """Upload community banner image (moderators only)"""
+        community = self.get_object()
+        if not self._check_moderator(request, community):
+            return Response({'error': 'Apenas moderadores podem alterar o banner'}, status=status.HTTP_403_FORBIDDEN)
+
+        if 'image' not in request.FILES:
+            return Response({'error': 'Nenhum arquivo enviado'}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES['image']
+        valid, result = self._validate_image(file)
+        if not valid:
+            return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Use transaction to ensure atomicity
+        with transaction.atomic():
+            # Delete old banner if it exists
+            if community.banner:
+                community.banner.delete(save=False)
+
+            # Generate filename and save using Django's storage system
+            # Note: ImageField's upload_to='community_banners/' will prepend the directory automatically
+            filename = f"community_banner_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
+            community.banner.save(filename, file, save=True)
+
+        # Build absolute URL for response
+        banner_url = request.build_absolute_uri(community.banner.url)
+        return Response({'message': 'Banner atualizado!', 'banner': banner_url}, status=status.HTTP_200_OK)
 
     def get_serializer_context(self):
         return {'request': self.request}
@@ -1242,6 +1337,10 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         # Check if already member
         if MembroComunidade.objects.filter(comunidade=community, usuario=user).exists():
             return Response({'error': 'Você já é membro desta comunidade'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if banned
+        if BanimentoComunidade.objects.filter(comunidade=community, usuario=user).exists():
+            return Response({'error': 'Você está banido desta comunidade'}, status=status.HTTP_403_FORBIDDEN)
             
         MembroComunidade.objects.create(comunidade=community, usuario=user, role='member')
         return Response({
@@ -1393,6 +1492,160 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         serializer = CommunityStatsSerializer(data=data)
         serializer.is_valid()
         return Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """Update community info (Moderators/Admins only)"""
+        community = self.get_object()
+        if not self._check_moderator(request, community):
+            return Response({'error': 'Apenas moderadores podem editar a comunidade'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Only allow updating specific fields
+        allowed_fields = {'nome', 'descricao', 'regras'}
+        update_data = {k: v for k, v in request.data.items() if k in allowed_fields}
+        
+        if not update_data:
+            return Response({'error': 'Nenhum campo válido para atualizar'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        for field, value in update_data.items():
+            setattr(community, field, value)
+        community.save()
+        
+        serializer = self.get_serializer(community)
+        return Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        """PATCH - delegates to update"""
+        return self.update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], url_path='ban-member')
+    def ban_member(self, request, pk=None):
+        """Ban a member from the community (Moderators only)"""
+        community = self.get_object()
+        if not self._check_moderator(request, community):
+            return Response({'error': 'Apenas moderadores podem banir membros'}, status=status.HTTP_403_FORBIDDEN)
+        
+        target_user_id = request.data.get('user_id')
+        motivo = request.data.get('motivo', '')
+        
+        if not target_user_id:
+            return Response({'error': 'Campo obrigatório: user_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        target_user = User.objects.filter(id_usuario=target_user_id).first()
+        if not target_user:
+            return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Prevent banning admins
+        target_membership = MembroComunidade.objects.filter(comunidade=community, usuario=target_user).first()
+        if target_membership and target_membership.role == 'admin':
+            return Response({'error': 'Não é possível banir um administrador'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Prevent self-ban
+        if target_user.id_usuario == request.user.id_usuario:
+            return Response({'error': 'Você não pode banir a si mesmo'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if already banned
+        if BanimentoComunidade.objects.filter(comunidade=community, usuario=target_user).exists():
+            return Response({'error': 'Usuário já está banido'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Remove membership if exists
+        if target_membership:
+            target_membership.delete()
+        
+        # Create ban record
+        BanimentoComunidade.objects.create(
+            comunidade=community,
+            usuario=target_user,
+            moderador=request.user,
+            motivo=motivo
+        )
+        
+        return Response({
+            'message': f'Usuário {target_user.nome_usuario} foi banido da comunidade',
+            'user_id': target_user_id
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='unban-member')
+    def unban_member(self, request, pk=None):
+        """Unban a member from the community (Moderators only)"""
+        community = self.get_object()
+        if not self._check_moderator(request, community):
+            return Response({'error': 'Apenas moderadores podem desbanir membros'}, status=status.HTTP_403_FORBIDDEN)
+        
+        target_user_id = request.data.get('user_id')
+        if not target_user_id:
+            return Response({'error': 'Campo obrigatório: user_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        ban = BanimentoComunidade.objects.filter(comunidade=community, usuario_id=target_user_id).first()
+        if not ban:
+            return Response({'error': 'Usuário não está banido'}, status=status.HTTP_404_NOT_FOUND)
+        
+        ban.delete()
+        return Response({
+            'message': 'Usuário desbanido com sucesso',
+            'user_id': target_user_id
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], url_path='banned-members')
+    def banned_members(self, request, pk=None):
+        """List banned members (Moderators only)"""
+        community = self.get_object()
+        if not self._check_moderator(request, community):
+            return Response({'error': 'Apenas moderadores podem ver banidos'}, status=status.HTTP_403_FORBIDDEN)
+        
+        bans = BanimentoComunidade.objects.filter(
+            comunidade=community
+        ).select_related('usuario', 'moderador').order_by('-data_ban')
+        
+        serializer = BanimentoComunidadeSerializer(bans, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='invite-moderator')
+    def invite_moderator(self, request, pk=None):
+        """Invite/promote a user to moderator (Admins only)"""
+        community = self.get_object()
+        
+        # Only admins can invite moderators
+        is_admin = MembroComunidade.objects.filter(
+            comunidade=community,
+            usuario=request.user,
+            role='admin'
+        ).exists()
+        
+        if not is_admin and not request.user.is_admin:
+            return Response({'error': 'Apenas administradores podem convidar moderadores'}, status=status.HTTP_403_FORBIDDEN)
+        
+        target_user_id = request.data.get('user_id')
+        if not target_user_id:
+            return Response({'error': 'Campo obrigatório: user_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        target_user = User.objects.filter(id_usuario=target_user_id).first()
+        if not target_user:
+            return Response({'error': 'Usuário não encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if banned
+        if BanimentoComunidade.objects.filter(comunidade=community, usuario=target_user).exists():
+            return Response({'error': 'Usuário está banido desta comunidade'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # If already a member, promote to moderator
+        membership = MembroComunidade.objects.filter(comunidade=community, usuario=target_user).first()
+        if membership:
+            if membership.role in ['moderator', 'admin']:
+                return Response({'error': 'Usuário já é moderador/admin'}, status=status.HTTP_400_BAD_REQUEST)
+            membership.role = 'moderator'
+            membership.save()
+        else:
+            # Add as moderator directly
+            MembroComunidade.objects.create(
+                comunidade=community,
+                usuario=target_user,
+                role='moderator'
+            )
+        
+        return Response({
+            'message': f'{target_user.nome_usuario} agora é moderador da comunidade',
+            'user_id': target_user_id,
+            'role': 'moderator'
+        }, status=status.HTTP_200_OK)
 
 
 # Rascunho (Draft) ViewSet

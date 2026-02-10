@@ -388,6 +388,7 @@ class Comunidade(models.Model):
     nome = models.CharField(max_length=100, unique=True)
     descricao = models.TextField()
     imagem = models.ImageField(upload_to='community_images/', null=True, blank=True)
+    banner = models.ImageField(upload_to='community_banners/', null=True, blank=True)
     regras = models.JSONField(default=list, blank=True)
     membros = models.ManyToManyField(Usuario, through='MembroComunidade', related_name='comunidades', blank=True)
     data_criacao = models.DateTimeField(default=timezone.now)
@@ -422,6 +423,23 @@ class MembroComunidade(models.Model):
         else:
             self.is_moderator = False
         super().save(*args, **kwargs)
+
+
+class BanimentoComunidade(models.Model):
+    id_ban = models.AutoField(primary_key=True)
+    comunidade = models.ForeignKey(Comunidade, on_delete=models.CASCADE, db_column='id_comunidade', related_name='banimentos')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', related_name='bans_comunidade')
+    moderador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, db_column='id_moderador', related_name='bans_aplicados')
+    motivo = models.TextField(blank=True, default='')
+    data_ban = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'banimentos_comunidade'
+        unique_together = ('comunidade', 'usuario')
+
+    def __str__(self):
+        return f"Ban: {self.usuario} em {self.comunidade}"
+
 
 # Signal to auto-create ConfiguracaoUsuario when a new Usuario is created
 @receiver(post_save, sender=Usuario)

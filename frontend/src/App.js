@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import Onboarding from './pages/Onboarding';
 import Home from './pages/Home';
 import ExplorePage from './pages/ExplorePage';
@@ -66,6 +67,14 @@ function App() {
                         element={
                             <PublicRoute>
                                 <Register />
+                            </PublicRoute>
+                        }
+                    />
+                    <Route
+                        path="/forgot-password"
+                        element={
+                            <PublicRoute>
+                                <ForgotPassword />
                             </PublicRoute>
                         }
                     />
