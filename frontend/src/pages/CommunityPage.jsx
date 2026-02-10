@@ -178,21 +178,58 @@ const CommunityPage = () => {
     };
 
     // ========== Invite Mod Handlers ==========
-    const handleInviteSearch = async (q) => {
+    const inviteSearchTimeoutRef = useRef(null);
+    const inviteSearchSeqRef = useRef(0);
+
+    useEffect(() => {
+        return () => {
+            if (inviteSearchTimeoutRef.current) {
+                clearTimeout(inviteSearchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleInviteSearch = (q) => {
         setInviteSearch(q);
+
+        // Clear any pending debounce timer
+        if (inviteSearchTimeoutRef.current) {
+            clearTimeout(inviteSearchTimeoutRef.current);
+            inviteSearchTimeoutRef.current = null;
+        }
+
+        // If the query is too short, reset results and loading state
         if (q.length < 2) {
+            // Invalidate any in-flight searches
+            inviteSearchSeqRef.current += 1;
             setInviteResults([]);
+            setInviteLoading(false);
             return;
         }
-        setInviteLoading(true);
-        try {
-            const res = await search(q, 'users', 10);
-            setInviteResults(res.data?.results?.users || []);
-        } catch (err) {
-            console.error('Search error:', err);
-        } finally {
-            setInviteLoading(false);
-        }
+
+        // Debounce the search to avoid firing on every keystroke
+        inviteSearchTimeoutRef.current = setTimeout(() => {
+            const currentSeq = inviteSearchSeqRef.current + 1;
+            inviteSearchSeqRef.current = currentSeq;
+
+            setInviteLoading(true);
+
+            (async () => {
+                try {
+                    const res = await search(q, 'users', 10);
+                    // Only apply results if this is the latest search
+                    if (inviteSearchSeqRef.current === currentSeq) {
+                        setInviteResults(res.data?.results?.users || []);
+                    }
+                } catch (err) {
+                    console.error('Search error:', err);
+                } finally {
+                    if (inviteSearchSeqRef.current === currentSeq) {
+                        setInviteLoading(false);
+                    }
+                }
+            })();
+        }, 300);
     };
 
     const handleInviteMod = async (userId) => {
