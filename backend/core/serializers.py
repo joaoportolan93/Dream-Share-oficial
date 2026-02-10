@@ -10,10 +10,14 @@ class UserSerializer(serializers.ModelSerializer):
     seguidores_count = serializers.SerializerMethodField()
     seguindo_count = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
+    is_blocked = serializers.SerializerMethodField()
+    is_muted = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id_usuario', 'nome_usuario', 'email', 'nome_completo', 'bio', 'avatar_url', 'data_nascimento', 'data_criacao', 'seguidores_count', 'seguindo_count', 'is_following', 'is_admin', 'privacidade_padrao')
+        fields = ('id_usuario', 'nome_usuario', 'email', 'nome_completo', 'bio', 'avatar_url', 
+                  'data_nascimento', 'data_criacao', 'seguidores_count', 'seguindo_count', 
+                  'is_following', 'is_blocked', 'is_muted', 'is_admin', 'privacidade_padrao')
 
     def get_avatar_url(self, obj):
         if obj.avatar_url:
@@ -41,6 +45,26 @@ class UserSerializer(serializers.ModelSerializer):
                 usuario_seguidor=request.user,
                 usuario_seguido=obj,
                 status=1
+            ).exists()
+        return False
+
+    def get_is_blocked(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from .models import Bloqueio
+            return Bloqueio.objects.filter(
+                usuario=request.user,
+                usuario_bloqueado=obj
+            ).exists()
+        return False
+
+    def get_is_muted(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            from .models import Silenciamento
+            return Silenciamento.objects.filter(
+                usuario=request.user,
+                usuario_silenciado=obj
             ).exists()
         return False
 
@@ -124,6 +148,8 @@ class PublicacaoSerializer(serializers.ModelSerializer):
     comentarios_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    comunidade_id = serializers.IntegerField(source='comunidade.id_comunidade', read_only=True, default=None)
+    comunidade_nome = serializers.CharField(source='comunidade.nome', read_only=True, default=None)
     
     class Meta:
         model = Publicacao
@@ -131,7 +157,8 @@ class PublicacaoSerializer(serializers.ModelSerializer):
             'id_publicacao', 'usuario', 'titulo', 'conteudo_texto',
             'data_sonho', 'tipo_sonho', 'visibilidade', 'emocoes_sentidas', 'imagem',
             'data_publicacao', 'editado', 'data_edicao', 'views_count',
-            'likes_count', 'comentarios_count', 'is_liked', 'is_saved'
+            'likes_count', 'comentarios_count', 'is_liked', 'is_saved',
+            'comunidade_id', 'comunidade_nome'
         )
         read_only_fields = ('id_publicacao', 'usuario', 'data_publicacao', 'editado', 'data_edicao', 'views_count')
 
@@ -459,14 +486,22 @@ class ComunidadeSerializer(serializers.ModelSerializer):
         return False
 
     def get_user_role(self, obj):
-        """Returns the current user's role in this community"""
+        """Returns the user's role in this community. Uses user_id query param if present, otherwise current user."""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             from .models import MembroComunidade
-            membership = MembroComunidade.objects.filter(
-                comunidade=obj, 
-                usuario=request.user
-            ).first()
+            # If user_id query param exists, show that user's role
+            target_user_id = request.query_params.get('user_id')
+            if target_user_id:
+                membership = MembroComunidade.objects.filter(
+                    comunidade=obj,
+                    usuario_id=target_user_id
+                ).first()
+            else:
+                membership = MembroComunidade.objects.filter(
+                    comunidade=obj, 
+                    usuario=request.user
+                ).first()
             if membership:
                 return membership.role
         return None

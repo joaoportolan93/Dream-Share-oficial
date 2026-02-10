@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import DreamCard from '../components/DreamCard';
 import { getCommunity, joinCommunity, leaveCommunity, deleteCommunity, getDreams, uploadCommunityIcon, uploadCommunityBanner, updateCommunity, inviteModerator, search } from '../services/api';
 import { FaBirthdayCake, FaEllipsisH, FaChevronDown, FaChevronUp, FaPlus, FaPen, FaEnvelope, FaUserPlus, FaTrash, FaCamera, FaTimes, FaSearch, FaSpinner } from 'react-icons/fa';
@@ -63,7 +63,7 @@ const CommunityPage = () => {
 
     const handleJoinLeave = async () => {
         try {
-            const response = community.is_member 
+            const response = community.is_member
                 ? await leaveCommunity(id)
                 : await joinCommunity(id);
             setCommunity(prev => ({
@@ -557,7 +557,7 @@ const CommunityPage = () => {
 
                             <div className="space-y-3">
                                 {community.moderators && community.moderators.map((mod) => (
-                                    <div key={mod.id} className="flex items-center gap-2 text-sm text-indigo-400 hover:underline cursor-pointer">
+                                    <Link key={mod.id} to={`/user/${mod.id}`} className="flex items-center gap-2 text-sm text-indigo-400 hover:underline">
                                         <div className="w-6 h-6 rounded bg-indigo-500 overflow-hidden flex items-center justify-center">
                                             {mod.avatar ? (
                                                 <img src={mod.avatar} alt={mod.username} className="w-full h-full object-cover" />
@@ -569,7 +569,7 @@ const CommunityPage = () => {
                                         {mod.role === 'admin' && (
                                             <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-bold">ADMIN</span>
                                         )}
-                                    </div>
+                                    </Link>
                                 ))}
                                 {!community.moderators && (
                                     <div className="text-xs text-gray-500 italic">Lista de moderadores indisponível</div>

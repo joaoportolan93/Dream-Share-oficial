@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaHeart, FaRegHeart, FaComment, FaRetweet, FaShare, FaBookmark, FaRegBookmark } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaComment, FaRetweet, FaShare, FaBookmark, FaRegBookmark, FaEllipsisH, FaUserPlus, FaBan, FaVolumeMute, FaFlag } from 'react-icons/fa';
 
 const Post = ({ post }) => {
     const [liked, setLiked] = useState(false);
@@ -31,21 +31,63 @@ const Post = ({ post }) => {
 
     const [saved, setSaved] = useState(false);
 
+    const [showMenu, setShowMenu] = useState(false);
+
     const handleSave = () => {
         setSaved(!saved);
     };
 
     return (
-        <div className="bg-white dark:bg-white/5 dark:backdrop-blur-sm rounded-xl p-5 shadow-card dark:shadow-none mb-6">
-            <div className="flex items-center gap-3 mb-4">
-                <img
-                    src={post.userImage}
-                    alt="User"
-                    className="w-[40px] h-[40px] rounded-full object-cover"
-                />
-                <div className="flex flex-col">
-                    <span className="text-sm font-bold text-text-main dark:text-white">{post.userName}</span>
-                    <span className="text-xs text-text-secondary dark:text-gray-400">{post.time}</span>
+        <div className="bg-white dark:bg-white/5 dark:backdrop-blur-sm rounded-xl p-5 shadow-card dark:shadow-none mb-6 relative">
+            <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <img
+                        src={post.userImage}
+                        alt="User"
+                        className="w-[40px] h-[40px] rounded-full object-cover"
+                    />
+                    <div className="flex flex-col">
+                        <span className="text-sm font-bold text-text-main dark:text-white">{post.userName}</span>
+                        <span className="text-xs text-text-secondary dark:text-gray-400">{post.time}</span>
+                    </div>
+                </div>
+
+                {/* Menu */}
+                <div className="relative">
+                    <button
+                        onClick={() => setShowMenu(!showMenu)}
+                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                    >
+                        <FaEllipsisH className="text-gray-500 dark:text-gray-400" />
+                    </button>
+                    {showMenu && (
+                        <div className="absolute right-0 top-10 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-lg shadow-xl z-20 min-w-[200px] overflow-hidden">
+                            <button
+                                onClick={() => { alert('Seguir usuário'); setShowMenu(false); }}
+                                className="w-full flex items-center gap-2 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm"
+                            >
+                                <FaUserPlus /> Seguir @{post.userName || 'usuario'}
+                            </button>
+                            <button
+                                onClick={() => { alert('Silenciar usuário'); setShowMenu(false); }}
+                                className="w-full flex items-center gap-2 px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-sm"
+                            >
+                                <FaVolumeMute /> Silenciar
+                            </button>
+                            <button
+                                onClick={() => { alert('Bloquear usuário'); setShowMenu(false); }}
+                                className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm"
+                            >
+                                <FaBan /> Bloquear @{post.userName || 'usuario'}
+                            </button>
+                            <button
+                                onClick={() => { alert('Denunciar post'); setShowMenu(false); }}
+                                className="w-full flex items-center gap-2 px-4 py-3 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors text-sm"
+                            >
+                                <FaFlag /> Denunciar post
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
