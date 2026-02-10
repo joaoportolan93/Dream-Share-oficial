@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import models, transaction
 import os
 import uuid
 from .serializers import RegisterSerializer, UserSerializer, UserUpdateSerializer, LogoutSerializer, PasswordResetSerializer
@@ -1245,18 +1245,19 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         if not valid:
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
 
-        filename = f"community_icon_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
-        icons_dir = os.path.join(settings.MEDIA_ROOT, 'community_images')
-        os.makedirs(icons_dir, exist_ok=True)
-        filepath = os.path.join(icons_dir, filename)
-        with open(filepath, 'wb+') as dest:
-            for chunk in file.chunks():
-                dest.write(chunk)
+        # Use transaction to ensure atomicity
+        with transaction.atomic():
+            # Delete old image if it exists
+            if community.imagem:
+                community.imagem.delete(save=False)
 
-        community.imagem = f"community_images/{filename}"
-        community.save()
+            # Generate filename and save using Django's storage system
+            # Note: ImageField's upload_to='community_images/' will prepend the directory automatically
+            filename = f"community_icon_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
+            community.imagem.save(filename, file, save=True)
 
-        image_url = request.build_absolute_uri(f"{settings.MEDIA_URL}community_images/{filename}")
+        # Build absolute URL for response
+        image_url = request.build_absolute_uri(community.imagem.url)
         return Response({'message': 'Ícone atualizado!', 'imagem': image_url}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='upload-banner')
@@ -1274,18 +1275,19 @@ class ComunidadeViewSet(viewsets.ModelViewSet):
         if not valid:
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
 
-        filename = f"community_banner_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
-        banners_dir = os.path.join(settings.MEDIA_ROOT, 'community_banners')
-        os.makedirs(banners_dir, exist_ok=True)
-        filepath = os.path.join(banners_dir, filename)
-        with open(filepath, 'wb+') as dest:
-            for chunk in file.chunks():
-                dest.write(chunk)
+        # Use transaction to ensure atomicity
+        with transaction.atomic():
+            # Delete old banner if it exists
+            if community.banner:
+                community.banner.delete(save=False)
 
-        community.banner = f"community_banners/{filename}"
-        community.save()
+            # Generate filename and save using Django's storage system
+            # Note: ImageField's upload_to='community_banners/' will prepend the directory automatically
+            filename = f"community_banner_{community.id_comunidade}_{uuid.uuid4().hex[:8]}.{result}"
+            community.banner.save(filename, file, save=True)
 
-        banner_url = request.build_absolute_uri(f"{settings.MEDIA_URL}community_banners/{filename}")
+        # Build absolute URL for response
+        banner_url = request.build_absolute_uri(community.banner.url)
         return Response({'message': 'Banner atualizado!', 'banner': banner_url}, status=status.HTTP_200_OK)
 
     def get_serializer_context(self):
