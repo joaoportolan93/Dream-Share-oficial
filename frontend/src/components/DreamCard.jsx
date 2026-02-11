@@ -338,19 +338,19 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
             {/* Actions */}
             <div className="flex items-center gap-6 pt-4 border-t border-gray-200 dark:border-white/10">
                 <button
+                    onClick={() => setShowComments(!showComments)}
+                    className={`flex items-center gap-2 transition-colors ${showComments ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}
+                >
+                    <FaComment />
+                    <span className="text-sm font-medium">{commentsCount}</span>
+                </button>
+                <button
                     onClick={handleLike}
                     disabled={liking}
                     className={`flex items-center gap-2 transition-colors ${liked ? 'text-red-500' : 'text-gray-500 dark:text-gray-400 hover:text-red-500'}`}
                 >
                     {liked ? <FaHeart className="text-red-500" /> : <FaRegHeart />}
                     <span className="text-sm font-medium">{likesCount}</span>
-                </button>
-                <button
-                    onClick={() => setShowComments(!showComments)}
-                    className={`flex items-center gap-2 transition-colors ${showComments ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}
-                >
-                    <FaComment />
-                    <span className="text-sm font-medium">{commentsCount}</span>
                 </button>
                 <button className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
                     <FaShare />
