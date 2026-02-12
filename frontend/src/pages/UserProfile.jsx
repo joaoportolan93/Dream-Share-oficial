@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { FaCalendarAlt, FaBirthdayCake, FaArrowLeft, FaLock, FaImage, FaUsers, FaCrown, FaShieldAlt, FaBan } from 'react-icons/fa';
 import { getUser, getProfile, followUser, unfollowUser, unblockUser, getUserPosts, getUserCommunityPosts, getUserMediaPosts, getUserMemberCommunities, getUserAdminCommunities } from '../services/api';
 import DreamCard from '../components/DreamCard';
+import FollowersModal from '../components/FollowersModal';
 
 const UserProfile = () => {
     const { id } = useParams();
@@ -24,6 +25,8 @@ const UserProfile = () => {
     const [adminCommunities, setAdminCommunities] = useState([]);
     const [adminCommLoading, setAdminCommLoading] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
+    const [showFollowersModal, setShowFollowersModal] = useState(false);
+    const [followersModalTab, setFollowersModalTab] = useState('followers');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -275,8 +278,13 @@ const UserProfile = () => {
                         <h1 className="text-3xl font-bold mb-2">
                             {user.nome_completo || 'Usuário'}
                         </h1>
-                        <h2 className="text-lg mb-4 opacity-90">
+                        <h2 className="text-lg mb-4 opacity-90 flex items-center gap-2 justify-center md:justify-start">
                             @{user.nome_usuario || 'username'}
+                            {user.privacidade_padrao === 2 && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-medium">
+                                    <FaLock size={10} /> Conta Privada
+                                </span>
+                            )}
                         </h2>
                         <p className="mb-4 leading-relaxed max-w-2xl">
                             {user.bio || 'Este usuário ainda não adicionou uma bio.'}
@@ -300,14 +308,20 @@ const UserProfile = () => {
                                 <div className="text-xl font-bold">{userDreams.length}</div>
                                 <div className="text-sm opacity-90">Sonhos</div>
                             </div>
-                            <div className="text-center md:text-left">
+                            <button
+                                onClick={() => { if (canSeePosts || isOwnProfile) { setFollowersModalTab('followers'); setShowFollowersModal(true); } }}
+                                className={`text-center md:text-left ${(canSeePosts || isOwnProfile) ? 'hover:opacity-70 cursor-pointer' : 'cursor-default'} transition-opacity`}
+                            >
                                 <div className="text-xl font-bold">{user.seguidores_count || 0}</div>
                                 <div className="text-sm opacity-90">Seguidores</div>
-                            </div>
-                            <div className="text-center md:text-left">
+                            </button>
+                            <button
+                                onClick={() => { if (canSeePosts || isOwnProfile) { setFollowersModalTab('following'); setShowFollowersModal(true); } }}
+                                className={`text-center md:text-left ${(canSeePosts || isOwnProfile) ? 'hover:opacity-70 cursor-pointer' : 'cursor-default'} transition-opacity`}
+                            >
                                 <div className="text-xl font-bold">{user.seguindo_count || 0}</div>
                                 <div className="text-sm opacity-90">Seguindo</div>
-                            </div>
+                            </button>
                         </div>
 
                         {!isOwnProfile && !isBlocked && (
@@ -594,6 +608,15 @@ const UserProfile = () => {
                     </>
                 )}
             </div>}
+
+            {/* Followers/Following Modal */}
+            <FollowersModal
+                isOpen={showFollowersModal}
+                onClose={() => setShowFollowersModal(false)}
+                userId={user.id_usuario}
+                initialTab={followersModalTab}
+                currentUserId={currentUser?.id_usuario}
+            />
         </div>
     );
 };

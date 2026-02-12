@@ -34,6 +34,7 @@ import UserManagement from './pages/admin/UserManagement';
 
 // Components
 import PrivateRoute from './components/PrivateRoute';
+import { SuggestionsProvider } from './contexts/SuggestionsContext';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -51,238 +52,240 @@ const PublicRoute = ({ children }) => {
 function App() {
     return (
         <Router>
-            <AnimatePresence mode="wait">
-                <Routes>
-                    {/* Public Routes (Auth) */}
-                    <Route
-                        path="/login"
-                        element={
-                            <PublicRoute>
-                                <Login />
-                            </PublicRoute>
-                        }
-                    />
-                    <Route
-                        path="/register"
-                        element={
-                            <PublicRoute>
-                                <Register />
-                            </PublicRoute>
-                        }
-                    />
-                    <Route
-                        path="/forgot-password"
-                        element={
-                            <PublicRoute>
-                                <ForgotPassword />
-                            </PublicRoute>
-                        }
-                    />
+            <SuggestionsProvider>
+                <AnimatePresence mode="wait">
+                    <Routes>
+                        {/* Public Routes (Auth) */}
+                        <Route
+                            path="/login"
+                            element={
+                                <PublicRoute>
+                                    <Login />
+                                </PublicRoute>
+                            }
+                        />
+                        <Route
+                            path="/register"
+                            element={
+                                <PublicRoute>
+                                    <Register />
+                                </PublicRoute>
+                            }
+                        />
+                        <Route
+                            path="/forgot-password"
+                            element={
+                                <PublicRoute>
+                                    <ForgotPassword />
+                                </PublicRoute>
+                            }
+                        />
 
-                    {/* Semi-Protected Route (needs auth but no layout) */}
-                    <Route
-                        path="/onboarding"
-                        element={
-                            <PrivateRoute>
-                                <Onboarding />
-                            </PrivateRoute>
-                        }
-                    />
+                        {/* Semi-Protected Route (needs auth but no layout) */}
+                        <Route
+                            path="/onboarding"
+                            element={
+                                <PrivateRoute>
+                                    <Onboarding />
+                                </PrivateRoute>
+                            }
+                        />
 
-                    {/* Protected Routes (with Layout) */}
-                    <Route
-                        path="/"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <Home />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/feed"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <Home />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/explore"
-                        element={
-                            <PrivateRoute>
-                                <Layout hideRightSidebar>
-                                    <ExplorePage />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/search"
-                        element={
-                            <PrivateRoute>
-                                <Layout hideRightSidebar>
-                                    <SearchPage />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/profile"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <Profile />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/user/:id"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <UserProfile />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/post/:id"
-                        element={
-                            <PrivateRoute>
-                                <Layout hideRightSidebar>
-                                    <PostPage />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/communities"
-                        element={
-                            <PrivateRoute>
-                                <Layout hideRightSidebar>
-                                    <Communities />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/community/:id"
-                        element={
-                            <PrivateRoute>
-                                <Layout hideRightSidebar>
-                                    <CommunityPage />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/community/:id/mod-dashboard"
-                        element={
-                            <PrivateRoute>
-                                <Layout hideRightSidebar>
-                                    <ModDashboard />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/create-post"
-                        element={
-                            <PrivateRoute>
-                                <CreatePostPage />
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/community/:communityId/submit"
-                        element={
-                            <PrivateRoute>
-                                <CreatePostPage />
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/saved"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <Saved />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/edit-profile"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <EditProfile />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/settings"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <Settings />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/notifications"
-                        element={
-                            <PrivateRoute>
-                                <Layout>
-                                    <Notifications />
-                                </Layout>
-                            </PrivateRoute>
-                        }
-                    />
+                        {/* Protected Routes (with Layout) */}
+                        <Route
+                            path="/"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <Home />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/feed"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <Home />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/explore"
+                            element={
+                                <PrivateRoute>
+                                    <Layout hideRightSidebar>
+                                        <ExplorePage />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/search"
+                            element={
+                                <PrivateRoute>
+                                    <Layout hideRightSidebar>
+                                        <SearchPage />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/profile"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <Profile />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/user/:id"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <UserProfile />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/post/:id"
+                            element={
+                                <PrivateRoute>
+                                    <Layout hideRightSidebar>
+                                        <PostPage />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/communities"
+                            element={
+                                <PrivateRoute>
+                                    <Layout hideRightSidebar>
+                                        <Communities />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/community/:id"
+                            element={
+                                <PrivateRoute>
+                                    <Layout hideRightSidebar>
+                                        <CommunityPage />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/community/:id/mod-dashboard"
+                            element={
+                                <PrivateRoute>
+                                    <Layout hideRightSidebar>
+                                        <ModDashboard />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/create-post"
+                            element={
+                                <PrivateRoute>
+                                    <CreatePostPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/community/:communityId/submit"
+                            element={
+                                <PrivateRoute>
+                                    <CreatePostPage />
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/saved"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <Saved />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/edit-profile"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <EditProfile />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/settings"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <Settings />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/notifications"
+                            element={
+                                <PrivateRoute>
+                                    <Layout>
+                                        <Notifications />
+                                    </Layout>
+                                </PrivateRoute>
+                            }
+                        />
 
-                    {/* Admin Routes - Issue #29 */}
-                    <Route
-                        path="/admin"
-                        element={
-                            <PrivateRoute>
-                                <AdminLayout>
-                                    <AdminDashboard />
-                                </AdminLayout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin/moderation"
-                        element={
-                            <PrivateRoute>
-                                <AdminLayout>
-                                    <ModerationQueue />
-                                </AdminLayout>
-                            </PrivateRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin/users"
-                        element={
-                            <PrivateRoute>
-                                <AdminLayout>
-                                    <UserManagement />
-                                </AdminLayout>
-                            </PrivateRoute>
-                        }
-                    />
+                        {/* Admin Routes - Issue #29 */}
+                        <Route
+                            path="/admin"
+                            element={
+                                <PrivateRoute>
+                                    <AdminLayout>
+                                        <AdminDashboard />
+                                    </AdminLayout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/moderation"
+                            element={
+                                <PrivateRoute>
+                                    <AdminLayout>
+                                        <ModerationQueue />
+                                    </AdminLayout>
+                                </PrivateRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/users"
+                            element={
+                                <PrivateRoute>
+                                    <AdminLayout>
+                                        <UserManagement />
+                                    </AdminLayout>
+                                </PrivateRoute>
+                            }
+                        />
 
-                    {/* 404 Not Found */}
-                    <Route path="*" element={<NotFound />} />
-                </Routes>
-            </AnimatePresence>
+                        {/* 404 Not Found */}
+                        <Route path="*" element={<NotFound />} />
+                    </Routes>
+                </AnimatePresence>
+            </SuggestionsProvider>
         </Router>
     );
 }

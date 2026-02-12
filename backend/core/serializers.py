@@ -155,7 +155,7 @@ class PublicacaoSerializer(serializers.ModelSerializer):
         model = Publicacao
         fields = (
             'id_publicacao', 'usuario', 'titulo', 'conteudo_texto',
-            'data_sonho', 'tipo_sonho', 'visibilidade', 'emocoes_sentidas', 'imagem',
+            'data_sonho', 'tipo_sonho', 'visibilidade', 'emocoes_sentidas', 'imagem', 'video',
             'data_publicacao', 'editado', 'data_edicao', 'views_count',
             'likes_count', 'comentarios_count', 'is_liked', 'is_saved',
             'comunidade_id', 'comunidade_nome'
@@ -197,7 +197,7 @@ class PublicacaoCreateSerializer(serializers.ModelSerializer):
         model = Publicacao
         fields = (
             'titulo', 'conteudo_texto', 'data_sonho', 'tipo_sonho',
-            'visibilidade', 'emocoes_sentidas', 'localizacao', 'imagem', 'comunidade'
+            'visibilidade', 'emocoes_sentidas', 'localizacao', 'imagem', 'video', 'comunidade'
         )
         extra_kwargs = {
             'titulo': {'required': False},
@@ -207,6 +207,7 @@ class PublicacaoCreateSerializer(serializers.ModelSerializer):
             'emocoes_sentidas': {'required': False},
             'localizacao': {'required': False},
             'imagem': {'required': False},
+            'video': {'required': False},
             'comunidade': {'required': False},
         }
 

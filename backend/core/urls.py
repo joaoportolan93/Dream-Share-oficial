@@ -8,7 +8,8 @@ from .views import (
     AdminStatsView, AdminUsersView, AdminUserDetailView, AdminReportsView, AdminReportActionView,
     CreateReportView, UserSettingsView, CloseFriendsManagerView, ToggleCloseFriendView,
     FollowRequestsView, FollowRequestActionView, ComunidadeViewSet, RascunhoViewSet,
-    BlockView, MuteView, TrendView, TopCommunityPostsView
+    BlockView, MuteView, TrendView, TopCommunityPostsView,
+    UserFollowersView, UserFollowingView
 )
 
 # Router for ViewSets
@@ -40,6 +41,8 @@ urlpatterns = [
     
     # Follow endpoints
     path('users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
+    path('users/<int:pk>/followers/', UserFollowersView.as_view(), name='user-followers'),
+    path('users/<int:pk>/following/', UserFollowingView.as_view(), name='user-following'),
     path('users/<int:pk>/block/', BlockView.as_view(), name='block'),
     path('users/<int:pk>/mute/', MuteView.as_view(), name='mute'),
     

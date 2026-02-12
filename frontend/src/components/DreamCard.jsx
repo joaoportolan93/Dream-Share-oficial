@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag, FaBookmark, FaRegBookmark, FaUserPlus, FaUserCheck, FaBan, FaVolumeMute } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaComment, FaShare, FaEllipsisH, FaEdit, FaTrash, FaUserFriends, FaFlag, FaBookmark, FaRegBookmark, FaUserPlus, FaUserCheck, FaBan, FaVolumeMute, FaLock } from 'react-icons/fa';
 import { deleteDream, likeDream, saveDream, followUser, unfollowUser, blockUser, unblockUser, muteUser, unmuteUser } from '../services/api';
 import { AnimatePresence } from 'framer-motion';
 import CommentSection from './CommentSection';
@@ -210,7 +210,11 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                             )}
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            @{dream.usuario?.nome_usuario} · {formatDate(dream.data_publicacao)}
+                            @{dream.usuario?.nome_usuario}
+                            {dream.usuario?.privacidade_padrao === 2 && (
+                                <FaLock className="inline ml-1 text-gray-400" size={10} title="Conta Privada" />
+                            )}
+                            {' '}· {formatDate(dream.data_publicacao)}
                         </p>
                         {dream.comunidade_id && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -358,7 +362,7 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className={`flex items-center gap-2 transition-colors ml-auto ${saved ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}
+                    className={`flex items-center gap-2 transition-colors ${saved ? 'text-primary' : 'text-gray-500 dark:text-gray-400 hover:text-primary'}`}
                     title={saved ? "Remover dos salvos" : "Salvar"}
                 >
                     {saved ? <FaBookmark /> : <FaRegBookmark />}
