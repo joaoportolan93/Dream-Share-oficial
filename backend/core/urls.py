@@ -8,7 +8,7 @@ from .views import (
     AdminStatsView, AdminUsersView, AdminUserDetailView, AdminReportsView, AdminReportActionView,
     CreateReportView, UserSettingsView, CloseFriendsManagerView, ToggleCloseFriendView,
     FollowRequestsView, FollowRequestActionView, ComunidadeViewSet, RascunhoViewSet,
-    BlockView, MuteView
+    BlockView, MuteView, TrendView, TopCommunityPostsView
 )
 
 # Router for ViewSets
@@ -65,6 +65,10 @@ urlpatterns = [
     path('settings/', UserSettingsView.as_view(), name='user-settings'),
     path('friends/manage/', CloseFriendsManagerView.as_view(), name='close-friends-manage'),
     path('friends/toggle/<int:pk>/', ToggleCloseFriendView.as_view(), name='close-friends-toggle'),
+    
+    # Explore page endpoints
+    path('trends/', TrendView.as_view(), name='trends'),
+    path('communities/top-posts/', TopCommunityPostsView.as_view(), name='community-top-posts'),
     
     # Include router URLs (dreams CRUD + notifications)
     path('', include(router.urls)),
