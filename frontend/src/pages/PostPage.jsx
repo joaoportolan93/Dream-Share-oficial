@@ -420,23 +420,23 @@ const PostPage = () => {
                             <strong>{likesCount}</strong> <span className="text-gray-500">Curtidas</span>
                         </span>
                         <span className="text-gray-900 dark:text-white">
-                            <strong>{comments.length}</strong> <span className="text-gray-500">Comentários</span>
+                            <strong>{post.comentarios_count || 0}</strong> <span className="text-gray-500">Comentários</span>
                         </span>
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-around py-2 border-t border-gray-200 dark:border-white/10">
                         <button
-                            onClick={() => handleReply(null)}
-                            className="flex items-center gap-2 p-2 text-gray-500 hover:text-primary transition-colors"
-                        >
-                            <FaComment size={20} />
-                        </button>
-                        <button
                             onClick={handleLike}
                             className={`flex items-center gap-2 p-2 transition-colors ${liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
                         >
                             {liked ? <FaHeart size={20} /> : <FaRegHeart size={20} />}
+                        </button>
+                        <button
+                            onClick={() => handleReply(null)}
+                            className="flex items-center gap-2 p-2 text-gray-500 hover:text-primary transition-colors"
+                        >
+                            <FaComment size={20} />
                         </button>
                         <button className="flex items-center gap-2 p-2 text-gray-500 hover:text-primary transition-colors">
                             <FaShare size={20} />

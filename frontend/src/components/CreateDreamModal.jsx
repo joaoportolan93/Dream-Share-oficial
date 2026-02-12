@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaTimes, FaMoon, FaImage, FaSmile, FaGlobeAmericas, FaUserFriends } from 'react-icons/fa';
+import { FaTimes, FaMoon, FaImage, FaVideo, FaSmile, FaGlobeAmericas, FaUserFriends } from 'react-icons/fa';
 import { createDream, updateDream, getProfile } from '../services/api';
 
 const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, communityId = null }) => {
@@ -15,6 +15,7 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, com
     const [emotions, setEmotions] = useState([]);
     const [showEmotionsMenu, setShowEmotionsMenu] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
+    const [videoPreview, setVideoPreview] = useState(null);
 
     const dreamTypes = [
         { value: 'Lúcido', icon: '✨', color: 'text-purple-400' },
@@ -30,6 +31,7 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, com
     }, []);
 
     const [selectedImage, setSelectedImage] = useState(null);
+    const [selectedVideo, setSelectedVideo] = useState(null);
 
     useEffect(() => {
         if (editingDream) {
@@ -45,6 +47,8 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, com
             setEmotions([]);
             setImagePreview(null);
             setSelectedImage(null);
+            setVideoPreview(null);
+            setSelectedVideo(null);
         }
         setError('');
     }, [editingDream, isOpen]);
@@ -65,6 +69,7 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, com
         if (dreamType) formData.append('tipo_sonho', dreamType);
         if (emotions.length > 0) formData.append('emocoes_sentidas', emotions.join(', '));
         if (selectedImage) formData.append('imagem', selectedImage);
+        if (selectedVideo) formData.append('video', selectedVideo);
         if (communityId) formData.append('comunidade', communityId);
 
         try {
@@ -88,6 +93,20 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, com
         if (file) {
             setSelectedImage(file);
             setImagePreview(URL.createObjectURL(file));
+            // Reset video if image selected
+            setSelectedVideo(null);
+            setVideoPreview(null);
+        }
+    };
+
+    const handleVideoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedVideo(file);
+            setVideoPreview(URL.createObjectURL(file));
+            // Reset image if video selected
+            setSelectedImage(null);
+            setImagePreview(null);
         }
     };
 
@@ -192,7 +211,19 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, com
                                     <div className="relative mt-3 rounded-xl overflow-hidden">
                                         <img src={imagePreview} alt="Preview" className="w-full max-h-80 object-cover rounded-xl" />
                                         <button
-                                            onClick={() => setImagePreview(null)}
+                                            onClick={() => { setImagePreview(null); setSelectedImage(null); }}
+                                            className="absolute top-2 right-2 p-2 bg-black/70 rounded-full hover:bg-black"
+                                        >
+                                            <FaTimes className="text-white" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {videoPreview && (
+                                    <div className="relative mt-3 rounded-xl overflow-hidden">
+                                        <video src={videoPreview} controls className="w-full max-h-80 object-cover rounded-xl" />
+                                        <button
+                                            onClick={() => { setVideoPreview(null); setSelectedVideo(null); }}
                                             className="absolute top-2 right-2 p-2 bg-black/70 rounded-full hover:bg-black"
                                         >
                                             <FaTimes className="text-white" />
@@ -230,9 +261,15 @@ const CreateDreamModal = ({ isOpen, onClose, onSuccess, editingDream = null, com
                     <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
                         <div className="flex items-center gap-1">
                             {/* Image Upload */}
-                            <label className="p-2 rounded-full hover:bg-primary/20 text-primary cursor-pointer transition-colors">
+                            <label className="p-2 rounded-full hover:bg-primary/20 text-primary cursor-pointer transition-colors" title="Imagem">
                                 <FaImage size={18} />
                                 <input type="file" accept="image/*,image/gif" onChange={handleImageUpload} className="hidden" />
+                            </label>
+
+                            {/* Video Upload */}
+                            <label className="p-2 rounded-full hover:bg-primary/20 text-primary cursor-pointer transition-colors" title="Vídeo">
+                                <FaVideo size={18} />
+                                <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
                             </label>
 
                             {/* Dream Type */}

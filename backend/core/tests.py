@@ -251,3 +251,62 @@ class TestCloseFriends:
         assert response.status_code == status.HTTP_200_OK
         assert response.data['is_close_friend'] is False
 
+
+@pytest.mark.django_db
+class TestFollowersList:
+    def test_public_user_followers_list(self, auth_client, user):
+        """Public profile: anyone can list followers"""
+        public_user = UsuarioFactory(privacidade_padrao=1)
+        follower = UsuarioFactory()
+        Seguidor.objects.create(usuario_seguidor=follower, usuario_seguido=public_user, status=1)
+
+        url = reverse('user-followers', args=[public_user.id_usuario])
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]['nome_usuario'] == follower.nome_usuario
+
+    def test_private_user_followers_denied(self, auth_client, user):
+        """Private profile: non-follower gets 403"""
+        private_user = UsuarioFactory(privacidade_padrao=2)
+        url = reverse('user-followers', args=[private_user.id_usuario])
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_private_user_followers_allowed_for_follower(self, auth_client, user):
+        """Private profile: approved follower can see list"""
+        private_user = UsuarioFactory(privacidade_padrao=2)
+        Seguidor.objects.create(usuario_seguidor=user, usuario_seguido=private_user, status=1)
+
+        url = reverse('user-followers', args=[private_user.id_usuario])
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_own_followers_always_visible(self, auth_client, user):
+        """Owner always sees their own followers list"""
+        user.privacidade_padrao = 2
+        user.save()
+        follower = UsuarioFactory()
+        Seguidor.objects.create(usuario_seguidor=follower, usuario_seguido=user, status=1)
+
+        url = reverse('user-followers', args=[user.id_usuario])
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+
+    def test_following_list_privacy(self, auth_client, user):
+        """Following list also respects privacy"""
+        private_user = UsuarioFactory(privacidade_padrao=2)
+        target = UsuarioFactory()
+        Seguidor.objects.create(usuario_seguidor=private_user, usuario_seguido=target, status=1)
+
+        # Denied
+        url = reverse('user-following', args=[private_user.id_usuario])
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+        # Now follow and retry
+        Seguidor.objects.create(usuario_seguidor=user, usuario_seguido=private_user, status=1)
+        response = auth_client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1

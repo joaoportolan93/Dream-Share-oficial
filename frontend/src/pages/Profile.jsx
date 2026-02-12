@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaCalendarAlt, FaEdit, FaEllipsisH, FaBirthdayCake, FaMoon, FaLock, FaImage, FaUsers, FaCrown, FaShieldAlt } from 'react-icons/fa';
 import { getProfile, getMyDreams, getDreams, getMyCommunityPosts, getMyMediaPosts, getUserCommunities, getMyAdminCommunities } from '../services/api';
 import DreamCard from '../components/DreamCard';
+import FollowersModal from '../components/FollowersModal';
 
 const Profile = () => {
     const [activeTab, setActiveTab] = useState('dreams');
@@ -21,6 +22,8 @@ const Profile = () => {
     const [memberCommLoading, setMemberCommLoading] = useState(false);
     const [adminCommunities, setAdminCommunities] = useState([]);
     const [adminCommLoading, setAdminCommLoading] = useState(false);
+    const [showFollowersModal, setShowFollowersModal] = useState(false);
+    const [followersModalTab, setFollowersModalTab] = useState('followers');
 
     useEffect(() => {
         if (activeTab === 'saved' && savedDreams.length === 0) {
@@ -205,14 +208,20 @@ const Profile = () => {
                                 <div className="text-xl font-bold">{dreams.length}</div>
                                 <div className="text-sm opacity-90">Sonhos</div>
                             </div>
-                            <div className="text-center md:text-left">
+                            <button
+                                onClick={() => { setFollowersModalTab('followers'); setShowFollowersModal(true); }}
+                                className="text-center md:text-left hover:opacity-70 cursor-pointer transition-opacity"
+                            >
                                 <div className="text-xl font-bold">{user?.seguidores_count || 0}</div>
                                 <div className="text-sm opacity-90">Seguidores</div>
-                            </div>
-                            <div className="text-center md:text-left">
+                            </button>
+                            <button
+                                onClick={() => { setFollowersModalTab('following'); setShowFollowersModal(true); }}
+                                className="text-center md:text-left hover:opacity-70 cursor-pointer transition-opacity"
+                            >
                                 <div className="text-xl font-bold">{user?.seguindo_count || 0}</div>
                                 <div className="text-sm opacity-90">Seguindo</div>
-                            </div>
+                            </button>
                         </div>
 
                         <div className="flex gap-4">
@@ -513,6 +522,15 @@ const Profile = () => {
                     </>
                 )}
             </div>
+
+            {/* Followers/Following Modal */}
+            <FollowersModal
+                isOpen={showFollowersModal}
+                onClose={() => setShowFollowersModal(false)}
+                userId={user?.id_usuario}
+                initialTab={followersModalTab}
+                currentUserId={user?.id_usuario}
+            />
         </div>
     );
 };

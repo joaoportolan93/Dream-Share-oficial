@@ -305,8 +305,14 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
             usuario=user
         ).values_list('usuario_bloqueado_id', flat=True)
 
-        # Base filter: exclude posts from banned users AND blocked users
-        base_filter = Q(usuario__status=1) & ~Q(usuario__in=blocked_user_ids)
+        # Base filter: exclude posts from banned users, blocked users,
+        # AND private accounts (unless followed or own posts)
+        privacy_filter = (
+            Q(usuario__privacidade_padrao=1) |  # Public accounts
+            Q(usuario__in=following_ids) |       # Followed private accounts
+            Q(usuario=user)                      # Own posts
+        )
+        base_filter = Q(usuario__status=1) & ~Q(usuario__in=blocked_user_ids) & privacy_filter
 
         if self.action == 'list':
             tab = self.request.query_params.get('tab', 'following')
@@ -638,6 +644,101 @@ class FollowView(APIView):
             'message': f'Você deixou de seguir {user_to_unfollow.nome_usuario}' if not was_pending else 'Solicitação cancelada',
             'follow_status': 'none'
         }, status=status.HTTP_200_OK)
+
+
+class UserFollowersView(APIView):
+    """List followers of a user, respecting privacy settings"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, pk):
+        target_user = get_object_or_404(User, pk=pk)
+        is_own = request.user.id_usuario == pk
+
+        # Privacy check: private accounts restrict list to owner or active followers
+        if not is_own and target_user.privacidade_padrao == 2:
+            is_follower = Seguidor.objects.filter(
+                usuario_seguidor=request.user,
+                usuario_seguido=target_user,
+                status=1
+            ).exists()
+            if not is_follower:
+                return Response(
+                    {'error': 'Esta conta é privada. Apenas seguidores aprovados podem ver esta lista.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Get active followers
+        follower_relations = Seguidor.objects.filter(
+            usuario_seguido=target_user,
+            status=1
+        ).select_related('usuario_seguidor')
+
+        # IDs the requesting user follows (for is_following flag)
+        my_following_ids = set(
+            Seguidor.objects.filter(
+                usuario_seguidor=request.user, status=1
+            ).values_list('usuario_seguido_id', flat=True)
+        )
+
+        data = []
+        for rel in follower_relations:
+            u = rel.usuario_seguidor
+            data.append({
+                'id_usuario': u.id_usuario,
+                'nome_usuario': u.nome_usuario,
+                'nome_completo': u.nome_completo,
+                'avatar_url': u.avatar_url,
+                'is_following': u.id_usuario in my_following_ids,
+            })
+
+        return Response(data)
+
+
+class UserFollowingView(APIView):
+    """List users that a user is following, respecting privacy settings"""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, pk):
+        target_user = get_object_or_404(User, pk=pk)
+        is_own = request.user.id_usuario == pk
+
+        # Privacy check
+        if not is_own and target_user.privacidade_padrao == 2:
+            is_follower = Seguidor.objects.filter(
+                usuario_seguidor=request.user,
+                usuario_seguido=target_user,
+                status=1
+            ).exists()
+            if not is_follower:
+                return Response(
+                    {'error': 'Esta conta é privada. Apenas seguidores aprovados podem ver esta lista.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Get users the target is actively following
+        following_relations = Seguidor.objects.filter(
+            usuario_seguidor=target_user,
+            status=1
+        ).select_related('usuario_seguido')
+
+        my_following_ids = set(
+            Seguidor.objects.filter(
+                usuario_seguidor=request.user, status=1
+            ).values_list('usuario_seguido_id', flat=True)
+        )
+
+        data = []
+        for rel in following_relations:
+            u = rel.usuario_seguido
+            data.append({
+                'id_usuario': u.id_usuario,
+                'nome_usuario': u.nome_usuario,
+                'nome_completo': u.nome_completo,
+                'avatar_url': u.avatar_url,
+                'is_following': u.id_usuario in my_following_ids,
+            })
+
+        return Response(data)
 
 
 class BlockView(APIView):

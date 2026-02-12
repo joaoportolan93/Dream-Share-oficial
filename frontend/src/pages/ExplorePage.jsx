@@ -10,8 +10,6 @@ import {
     FaEye,
     FaMobileAlt,
     FaCloud,
-    FaUserPlus,
-    FaCheck,
     FaHashtag,
     FaTheaterMasks,
     FaTrophy,
@@ -20,16 +18,17 @@ import {
     FaRegCommentDots,
     FaSyncAlt
 } from 'react-icons/fa';
-import { getTrends, getTopCommunityPosts, getSuggestedUsers, followUser, unfollowUser } from '../services/api';
+import { getTrends, getTopCommunityPosts } from '../services/api';
+import SuggestionsCard from '../components/SuggestionsCard';
 
 const ExplorePage = () => {
     const navigate = useNavigate();
-    const [followingUsers, setFollowingUsers] = useState([]);
+
 
     // API Data
     const [trends, setTrends] = useState({ hashtags: [], emocoes: [], tipos_sonho: [] });
     const [topPosts, setTopPosts] = useState({ posts: [], comunidades: [] });
-    const [suggestions, setSuggestions] = useState([]);
+
     const [loadingTrends, setLoadingTrends] = useState(true);
     const [loadingTopPosts, setLoadingTopPosts] = useState(true);
 
@@ -69,7 +68,6 @@ const ExplorePage = () => {
     useEffect(() => {
         fetchTrends();
         fetchTopPosts();
-        fetchSuggestions();
     }, []);
 
     const fetchTrends = async () => {
@@ -96,33 +94,7 @@ const ExplorePage = () => {
         }
     };
 
-    const fetchSuggestions = async () => {
-        try {
-            const res = await getSuggestedUsers();
-            setSuggestions(res.data?.slice(0, 3) || []);
-        } catch (err) {
-            console.error('Error fetching suggestions:', err);
-        }
-    };
 
-    const toggleFollow = async (userId) => {
-        const isCurrentlyFollowing = followingUsers.includes(userId);
-        setFollowingUsers(prev =>
-            isCurrentlyFollowing ? prev.filter(id => id !== userId) : [...prev, userId]
-        );
-        try {
-            if (isCurrentlyFollowing) {
-                await unfollowUser(userId);
-            } else {
-                await followUser(userId);
-            }
-        } catch (err) {
-            // Revert on error
-            setFollowingUsers(prev =>
-                isCurrentlyFollowing ? [...prev, userId] : prev.filter(id => id !== userId)
-            );
-        }
-    };
 
     // Get current trend items based on active tab
     const currentTrendItems = activeTrendTab === 'hashtags'
@@ -273,48 +245,8 @@ const ExplorePage = () => {
                 {/* === SIDEBAR COLUMN (30%) === */}
                 <div className="lg:col-span-4 space-y-8 hidden lg:block">
 
-                    {/* Widget: Sugestões para seguir */}
-                    <div className="bg-white dark:bg-cosmic-card/80 dark:backdrop-blur-md border border-border dark:border-white/10 rounded-2xl p-6 shadow-card dark:shadow-soft">
-                        <h3 className="text-lg font-bold mb-6 text-text-main dark:text-white border-b border-border dark:border-white/5 pb-2">Sugestões para seguir</h3>
-                        <div className="space-y-5">
-                            {suggestions.map(user => (
-                                <div key={user.id_usuario} className="flex items-center justify-between group">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden ring-2 ring-transparent group-hover:ring-primary dark:group-hover:ring-cosmic-accent transition-all">
-                                            <img src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.id_usuario}`} alt={user.nome_usuario} className="w-full h-full object-cover" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-sm leading-tight text-text-main dark:text-white">{user.nome_completo || user.nome_usuario}</p>
-                                            <p className="text-xs text-text-secondary dark:text-cosmic-text-muted">@{user.nome_usuario}</p>
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={() => toggleFollow(user.id_usuario)}
-                                        className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-colors shadow-glow ${
-                                            followingUsers.includes(user.id_usuario)
-                                                ? 'bg-green-500 hover:bg-green-600 text-white'
-                                                : 'bg-cosmic-accent hover:bg-violet-600 text-white'
-                                        }`}
-                                    >
-                                        {followingUsers.includes(user.id_usuario) ? (
-                                            <>
-                                                <FaCheck size={10} />
-                                                Seguindo
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FaUserPlus size={10} />
-                                                Seguir
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                        <button className="w-full mt-6 text-xs text-primary dark:text-cosmic-accent hover:text-primary-dark dark:hover:text-white transition-colors uppercase tracking-widest font-bold">
-                            Ver mais
-                        </button>
-                    </div>
+                    {/* Widget: Sugestões para seguir — shared component */}
+                    <SuggestionsCard variant="explore" maxUsers={3} />
 
 
                     {/* Widget: Dicas de Sono */}
@@ -334,23 +266,23 @@ const ExplorePage = () => {
                                     <FaSyncAlt size={12} />
                                 </button>
                             </div>
-                            </div>
-                            <div className="min-h-[180px]"> 
-                                <AnimatePresence mode="wait">
-                                    <motion.ul
-                                        key={randomTips.map(t => t.text).join('')} // Trigger animation on change
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.5 }}
-                                        className="space-y-3"
-                                    >
-                                        {randomTips.map((tip, i) => (
-                                            <TipItem key={i} icon={tip.icon} text={tip.text} />
-                                        ))}
-                                    </motion.ul>
-                                </AnimatePresence>
-                            </div>
+                        </div>
+                        <div className="min-h-[180px]">
+                            <AnimatePresence mode="wait">
+                                <motion.ul
+                                    key={randomTips.map(t => t.text).join('')} // Trigger animation on change
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.5 }}
+                                    className="space-y-3"
+                                >
+                                    {randomTips.map((tip, i) => (
+                                        <TipItem key={i} icon={tip.icon} text={tip.text} />
+                                    ))}
+                                </motion.ul>
+                            </AnimatePresence>
+                        </div>
                     </div>
 
                     {/* Widget: Insights de Sonhos */}
@@ -424,11 +356,10 @@ const TrendPill = ({ text, count, rank, type }) => {
     return (
         <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r ${colors[type]} border transition-all hover:scale-[1.02] active:scale-[0.98]`}>
             {rank <= 3 && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
-                    rank === 1 ? 'bg-yellow-500/20 text-yellow-500' :
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${rank === 1 ? 'bg-yellow-500/20 text-yellow-500' :
                     rank === 2 ? 'bg-gray-400/20 text-gray-400' :
-                    'bg-amber-600/20 text-amber-600'
-                }`}>
+                        'bg-amber-600/20 text-amber-600'
+                    }`}>
                     #{rank}
                 </span>
             )}
@@ -453,9 +384,8 @@ const TopPostItem = ({ post, rank, navigate }) => {
             className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-transparent hover:border-primary/20 dark:hover:border-cosmic-accent/20 transition-all cursor-pointer group"
         >
             {/* Rank */}
-            <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black ${
-                rankColors[rank] || 'text-text-secondary dark:text-gray-500 bg-gray-100 dark:bg-white/5'
-            }`}>
+            <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black ${rankColors[rank] || 'text-text-secondary dark:text-gray-500 bg-gray-100 dark:bg-white/5'
+                }`}>
                 {rank}
             </div>
 

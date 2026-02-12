@@ -111,6 +111,8 @@ export const saveDream = (id) => api.post(`/api/dreams/${id}/save/`);
 // Follow endpoints
 export const followUser = (userId) => api.post(`/api/users/${userId}/follow/`);
 export const unfollowUser = (userId) => api.delete(`/api/users/${userId}/follow/`);
+export const getUserFollowers = (userId) => api.get(`/api/users/${userId}/followers/`);
+export const getUserFollowing = (userId) => api.get(`/api/users/${userId}/following/`);
 
 // Block/Mute endpoints
 export const blockUser = (userId) => api.post(`/api/users/${userId}/block/`);
