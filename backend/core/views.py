@@ -1879,7 +1879,8 @@ class TrendView(APIView):
                     parts = cleaned.split(' ', 1)
                     keyword = parts[-1] if len(parts) > 1 else parts[0]
                     if keyword in self.VALID_EMOTIONS:
-                        emotion_counter[cleaned] += 1
+                        # Use the cleaned text keyword (without emoji) as the counter key
+                        emotion_counter[keyword] += 1
             if tipo:
                 stripped = tipo.strip()
                 if stripped in self.VALID_DREAM_TYPES:
