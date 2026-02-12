@@ -234,7 +234,7 @@ const ExplorePage = () => {
                                 {topPosts.comunidades.map((com) => (
                                     <button
                                         key={com.id_comunidade}
-                                        onClick={() => navigate(`/comunidades/${com.id_comunidade}`)}
+                                        onClick={() => navigate(`/Community/${com.id_comunidade}`)}
                                         className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 border border-border dark:border-white/10 text-xs font-medium text-text-secondary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
                                     >
                                         {com.imagem ? (
