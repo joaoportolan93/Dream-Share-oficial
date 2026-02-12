@@ -1828,3 +1828,136 @@ class RascunhoViewSet(viewsets.ModelViewSet):
         """Automatically set the current user as the draft owner"""
         serializer.save(usuario=self.request.user)
 
+
+# ==========================================
+# EXPLORE PAGE: TRENDS & TOP COMMUNITY POSTS
+# ==========================================
+
+class TrendView(APIView):
+    """
+    Returns trending data for the Explore page:
+    - Top hashtags by usage count
+    - Top emotions/dream types from recent posts
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    # Valid options must match CreateDreamModal.jsx exactly
+    VALID_DREAM_TYPES = {'Lúcido', 'Normal', 'Pesadelo', 'Recorrente'}
+    VALID_EMOTIONS = {'Feliz', 'Medo', 'Surpresa', 'Triste', 'Raiva', 'Confuso', 'Paz', 'Êxtase'}
+
+    def get(self, request):
+        from collections import Counter
+
+        # --- Trending Hashtags (top 15 by contagem_uso) ---
+        trending_hashtags = Hashtag.objects.order_by('-contagem_uso', '-ultima_utilizacao')[:15]
+        hashtags_data = [
+            {
+                'id_hashtag': h.id_hashtag,
+                'texto_hashtag': h.texto_hashtag,
+                'contagem_uso': h.contagem_uso,
+            }
+            for h in trending_hashtags
+        ]
+
+        # --- Trending Emotions & Dream Types from recent posts (last 30 days) ---
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        recent_posts = Publicacao.objects.filter(
+            data_publicacao__gte=thirty_days_ago,
+            visibilidade=1  # Only public posts
+        ).values_list('emocoes_sentidas', 'tipo_sonho')
+
+        emotion_counter = Counter()
+        tipo_counter = Counter()
+
+        for emocoes, tipo in recent_posts:
+            # emocoes_sentidas is a text field — may contain comma-separated values
+            # Values are stored as "😊 Feliz" — strip emoji prefix to get the keyword
+            if emocoes:
+                for emo in emocoes.split(','):
+                    cleaned = emo.strip()
+                    # Extract the text part after the emoji (e.g. "😊 Feliz" -> "Feliz")
+                    parts = cleaned.split(' ', 1)
+                    keyword = parts[-1] if len(parts) > 1 else parts[0]
+                    if keyword in self.VALID_EMOTIONS:
+                        emotion_counter[cleaned] += 1
+            if tipo:
+                stripped = tipo.strip()
+                if stripped in self.VALID_DREAM_TYPES:
+                    tipo_counter[stripped] += 1
+
+        trending_emotions = [
+            {'nome': nome, 'contagem': count}
+            for nome, count in emotion_counter.most_common(8)
+        ]
+
+        trending_tipos = [
+            {'nome': nome, 'contagem': count}
+            for nome, count in tipo_counter.most_common(4)
+        ]
+
+        return Response({
+            'hashtags': hashtags_data,
+            'emocoes': trending_emotions,
+            'tipos_sonho': trending_tipos,
+        })
+
+
+class TopCommunityPostsView(APIView):
+    """
+    Returns top 10 most relevant posts from random communities,
+    ranked by engagement (likes + comments).
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        import random as _random
+
+        # Pick up to 5 random communities that have posts
+        community_ids = list(
+            Comunidade.objects.filter(
+                publicacoes__isnull=False
+            ).values_list('id_comunidade', flat=True).distinct()
+        )
+
+        if not community_ids:
+            return Response({'posts': [], 'comunidades': []})
+
+        # Select up to 5 random communities
+        selected_ids = _random.sample(community_ids, min(5, len(community_ids)))
+
+        # Get top 10 posts from those communities, ordered by engagement
+        top_posts = (
+            Publicacao.objects.filter(
+                comunidade_id__in=selected_ids,
+                visibilidade=1  # Public only
+            )
+            .select_related('usuario', 'comunidade')
+            .annotate(
+                likes_count=Count('reacaopublicacao'),
+                comentarios_count=Count('comentario'),
+                engagement=Count('reacaopublicacao') + Count('comentario'),
+            )
+            .order_by('-engagement', '-data_publicacao')[:10]
+        )
+
+        serializer = PublicacaoSerializer(
+            top_posts, many=True, context={'request': request}
+        )
+
+        # Also send the selected communities info
+        selected_communities = Comunidade.objects.filter(id_comunidade__in=selected_ids)
+        communities_data = [
+            {
+                'id_comunidade': c.id_comunidade,
+                'nome': c.nome,
+                'imagem': request.build_absolute_uri(c.imagem.url) if c.imagem else None,
+                'membros_count': c.membros.count(),
+            }
+            for c in selected_communities
+        ]
+
+        return Response({
+            'posts': serializer.data,
+            'comunidades': communities_data,
+        })
+

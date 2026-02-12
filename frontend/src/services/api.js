@@ -213,6 +213,10 @@ export const createDraft = (data) => api.post('/api/drafts/', data);
 export const updateDraft = (id, data) => api.patch(`/api/drafts/${id}/`, data);
 export const deleteDraft = (id) => api.delete(`/api/drafts/${id}/`);
 
+// Explore page endpoints
+export const getTrends = () => api.get('/api/trends/');
+export const getTopCommunityPosts = () => api.get('/api/communities/top-posts/');
+
 export default api;
 
 

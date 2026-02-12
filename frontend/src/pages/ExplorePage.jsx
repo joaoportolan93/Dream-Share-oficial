@@ -1,134 +1,135 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     FaFire,
-    FaClock,
     FaRandom,
-    FaSearch,
     FaHeart,
-    FaComment,
     FaStar,
     FaMoon,
     FaEye,
     FaMobileAlt,
     FaCloud,
     FaUserPlus,
-    FaCheck
+    FaCheck,
+    FaHashtag,
+    FaTheaterMasks,
+    FaTrophy,
+    FaUsers,
+    FaChevronRight,
+    FaRegCommentDots,
+    FaSyncAlt
 } from 'react-icons/fa';
+import { getTrends, getTopCommunityPosts, getSuggestedUsers, followUser, unfollowUser } from '../services/api';
 
 const ExplorePage = () => {
     const navigate = useNavigate();
-    const [activeFilter, setActiveFilter] = useState('trending');
-    const [searchQuery, setSearchQuery] = useState('');
     const [followingUsers, setFollowingUsers] = useState([]);
 
-    // Persist follow/unfollow action to the backend
-    const updateFollowStatusOnServer = async (userId, shouldFollow) => {
+    // API Data
+    const [trends, setTrends] = useState({ hashtags: [], emocoes: [], tipos_sonho: [] });
+    const [topPosts, setTopPosts] = useState({ posts: [], comunidades: [] });
+    const [suggestions, setSuggestions] = useState([]);
+    const [loadingTrends, setLoadingTrends] = useState(true);
+    const [loadingTopPosts, setLoadingTopPosts] = useState(true);
+
+    // Active trends tab
+    const [activeTrendTab, setActiveTrendTab] = useState('hashtags');
+
+    // Randomized tips
+    const allTips = [
+        { icon: <FaMoon className="text-blue-300" />, text: "Mantenha um horário de sono regular." },
+        { icon: <FaEye className="text-purple-300" />, text: "Antes de dormir, repita mentalmente: 'Hoje eu vou lembrar dos meus sonhos'. Parece mágica, mas a neurociência chama de Memória Prospectiva. Funciona!" },
+        { icon: <FaMobileAlt className="text-red-300" />, text: "Evite telas 1h antes de dormir." },
+        { icon: <FaCloud className="text-white/60" />, text: "Anote seus sonhos assim que acordar." },
+        { icon: <FaCloud className="text-cyan-300" />, text: "Não consegue desligar? Inspire pelo nariz por 4 segundos, segure por 7 e solte pela boca por 8. Isso 'hackeia' seu nervo vago e força o corpo a relaxar fisicamente." },
+        { icon: <FaStar className="text-yellow-300" />, text: "Exponha-se à luz natural assim que acordar. A luz do sol zera a produção de melatonina e ajusta seu relógio interno para você sentir sono na hora certa à noite." },
+        { icon: <FaMoon className="text-indigo-300" />, text: "Pesadelos muitas vezes são o cérebro tentando processar emoções difíceis do dia. Registrá-los ajuda a entender seus medos e superar traumas." },
+        { icon: <FaEye className="text-amber-300" />, text: "A cafeína tem uma 'meia-vida' longa. Aquele espresso das 17h ainda está 50% ativo no seu sangue na hora de dormir, impedindo você de entrar no sono REM profundo onde os sonhos acontecem." },
+    ];
+
+    const shuffleTips = () => {
+        const shuffled = [...allTips].sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, 4);
+    };
+
+    const [randomTips, setRandomTips] = useState(() => shuffleTips());
+
+
+
+    // Auto-shuffle every 2 minutes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setRandomTips(shuffleTips());
+        }, 120000); // 2 minutes
+
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        fetchTrends();
+        fetchTopPosts();
+        fetchSuggestions();
+    }, []);
+
+    const fetchTrends = async () => {
         try {
-            const response = await fetch(`/api/users/${userId}/follow`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: shouldFollow ? 'follow' : 'unfollow'
-                })
-            });
+            setLoadingTrends(true);
+            const res = await getTrends();
+            setTrends(res.data);
+        } catch (err) {
+            console.error('Error fetching trends:', err);
+        } finally {
+            setLoadingTrends(false);
+        }
+    };
 
-            if (!response.ok) {
-                // Backend rejected the update; log for debugging.
-                console.error('Failed to update follow status on server', {
-                    userId,
-                    shouldFollow,
-                    status: response.status
-                });
+    const fetchTopPosts = async () => {
+        try {
+            setLoadingTopPosts(true);
+            const res = await getTopCommunityPosts();
+            setTopPosts(res.data);
+        } catch (err) {
+            console.error('Error fetching top community posts:', err);
+        } finally {
+            setLoadingTopPosts(false);
+        }
+    };
+
+    const fetchSuggestions = async () => {
+        try {
+            const res = await getSuggestedUsers();
+            setSuggestions(res.data?.slice(0, 3) || []);
+        } catch (err) {
+            console.error('Error fetching suggestions:', err);
+        }
+    };
+
+    const toggleFollow = async (userId) => {
+        const isCurrentlyFollowing = followingUsers.includes(userId);
+        setFollowingUsers(prev =>
+            isCurrentlyFollowing ? prev.filter(id => id !== userId) : [...prev, userId]
+        );
+        try {
+            if (isCurrentlyFollowing) {
+                await unfollowUser(userId);
+            } else {
+                await followUser(userId);
             }
-        } catch (error) {
-            // Network or other error; keep UI state but log the issue.
-            console.error('Error updating follow status on server', {
-                userId,
-                shouldFollow,
-                error
-            });
+        } catch (err) {
+            // Revert on error
+            setFollowingUsers(prev =>
+                isCurrentlyFollowing ? [...prev, userId] : prev.filter(id => id !== userId)
+            );
         }
     };
 
-    // Toggle follow state for a user
-    const toggleFollow = (userId) => {
-        setFollowingUsers(prev => {
-            const isCurrentlyFollowing = prev.includes(userId);
-            const updatedFollowing = isCurrentlyFollowing
-                ? prev.filter(id => id !== userId)
-                : [...prev, userId];
-
-            // Optimistically update UI and persist change to backend
-            updateFollowStatusOnServer(userId, !isCurrentlyFollowing);
-
-            return updatedFollowing;
-        });
-    };
-
-    // Mock Data for Dream Cards
-    const dreams = [
-        {
-            id: 1,
-            title: "Cidade Flutuante de Cristal",
-            category: "Sonhos Lúcidos",
-            author: "Luna Sky",
-            likes: 1240,
-            comments: 85,
-            image: "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=2542&auto=format&fit=crop"
-        },
-        {
-            id: 2,
-            title: "Conversa com Ancestrais",
-            category: "Espiritual",
-            author: "Zen Master",
-            likes: 890,
-            comments: 42,
-            image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2568&auto=format&fit=crop"
-        },
-        {
-            id: 3,
-            title: "Voando sobre Neom",
-            category: "Futurismo",
-            author: "Cyber Dremer",
-            likes: 2100,
-            comments: 310,
-            image: "https://images.unsplash.com/photo-1480796927426-f609979314bd?q=80&w=2600&auto=format&fit=crop"
-        },
-        {
-            id: 4,
-            title: "O Labirinto Infinito",
-            category: "Pesadelo",
-            author: "Dark Walker",
-            likes: 65,
-            comments: 12,
-            image: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=2574&auto=format&fit=crop"
-        }
-    ];
-
-    // Filter dreams based on search query
-    const filteredDreams = dreams.filter(dream => 
-        dream.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dream.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        dream.author.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    // Mock Data for Suggestions
-    const suggestions = [
-        { id: 1, name: "Astral Traveler", handle: "@astral_t", bio: "Explorando o multiverso onírico." },
-        { id: 2, name: "Lucid Dreamer", handle: "@lucid_d", bio: "Mestre em controle de sonhos." },
-        { id: 3, name: "Night Owl", handle: "@night_owl", bio: "Sonhos noturnos e visões." },
-    ];
-
-    // Handle search submission
-    const handleSearch = (e) => {
-        e.preventDefault();
-        if (searchQuery.trim()) {
-            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-        }
-    };
+    // Get current trend items based on active tab
+    const currentTrendItems = activeTrendTab === 'hashtags'
+        ? trends.hashtags
+        : activeTrendTab === 'emocoes'
+            ? trends.emocoes
+            : trends.tipos_sonho;
 
     return (
         <div className="w-full min-h-screen bg-background-main dark:bg-cosmic-bg text-text-main dark:text-white p-4 font-sans transition-colors duration-300">
@@ -153,120 +154,119 @@ const ExplorePage = () => {
                         </div>
                     </div>
 
-                    {/* 2. Search Bar */}
-                    <form onSubmit={handleSearch} className="relative">
-                        <div className="flex items-center bg-white dark:bg-cosmic-card border border-border dark:border-white/10 rounded-xl overflow-hidden shadow-card hover:border-primary/30 dark:hover:border-cosmic-accent/50 transition-all">
-                            <div className="pl-4 text-gray-400">
-                                <FaSearch size={18} />
+                    {/* ============================== */}
+                    {/* 2. TRENDS SECTION */}
+                    {/* ============================== */}
+                    <div className="bg-white dark:bg-cosmic-card/80 dark:backdrop-blur-md border border-border dark:border-white/10 rounded-2xl p-6 shadow-card dark:shadow-soft">
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2">
+                                <FaFire className="text-orange-400 text-xl" />
+                                <h2 className="text-xl font-bold text-text-main dark:text-white">O que está rolando</h2>
                             </div>
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Pesquisar sonhos, categorias, usuários..."
-                                className="flex-1 px-4 py-3 bg-transparent text-text-main dark:text-white placeholder-gray-500 focus:outline-none"
-                            />
-                            {searchQuery && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchQuery('')}
-                                    className="px-3 text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                                >
-                                    ×
-                                </button>
-                            )}
-                            <button
-                                type="submit"
-                                className="px-6 py-3 bg-primary dark:bg-cosmic-accent text-white font-semibold hover:opacity-90 transition-opacity"
-                            >
-                                Buscar
-                            </button>
                         </div>
-                    </form>
 
-                    {/* 3. Filters & Input */}
-                    <div className="space-y-6">
-                        {/* Filter Pills */}
-                        <div className="flex flex-wrap gap-4">
-                            <FilterPill
-                                title="Em Alta"
-                                icon={<FaFire />}
-                                active={activeFilter === 'trending'}
-                                onClick={() => setActiveFilter('trending')}
+                        {/* Trend Sub-tabs */}
+                        <div className="flex gap-2 mb-5 border-b border-border dark:border-white/10 pb-3">
+                            <TrendTab
+                                label="Hashtags"
+                                icon={<FaHashtag />}
+                                active={activeTrendTab === 'hashtags'}
+                                onClick={() => setActiveTrendTab('hashtags')}
                             />
-                            <FilterPill
-                                title="Recentes"
-                                icon={<FaClock />}
-                                active={activeFilter === 'recent'}
-                                onClick={() => setActiveFilter('recent')}
+                            <TrendTab
+                                label="Emoções"
+                                icon={<FaTheaterMasks />}
+                                active={activeTrendTab === 'emocoes'}
+                                onClick={() => setActiveTrendTab('emocoes')}
                             />
-                            <FilterPill
-                                title="Aleatório"
-                                icon={<FaRandom />}
-                                active={activeFilter === 'random'}
-                                onClick={() => setActiveFilter('random')}
+                            <TrendTab
+                                label="Tipos de Sonho"
+                                icon={<FaMoon />}
+                                active={activeTrendTab === 'tipos_sonho'}
+                                onClick={() => setActiveTrendTab('tipos_sonho')}
                             />
                         </div>
 
-                        {/* New Post Placeholder */}
-                        <div 
-                            onClick={() => navigate('/create')}
-                            className="bg-white dark:bg-cosmic-card border border-border dark:border-white/10 rounded-xl p-4 flex items-center gap-4 hover:border-primary/30 dark:hover:border-cosmic-accent/50 transition-all cursor-pointer shadow-card dark:shadow-soft"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 overflow-hidden">
-                                {localStorage.getItem('user') ? (
-                                    <img
-                                        src={JSON.parse(localStorage.getItem('user')).avatar_url || 'https://randomuser.me/api/portraits/lego/1.jpg'}
-                                        alt="Avatar"
-                                        className="w-full h-full object-cover"
+                        {/* Trend Content */}
+                        {loadingTrends ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : currentTrendItems.length === 0 ? (
+                            <p className="text-center text-text-secondary dark:text-cosmic-text-muted py-6 text-sm">
+                                Nenhuma tendência encontrada ainda. Publique sonhos para criar tendências!
+                            </p>
+                        ) : (
+                            <div className="flex flex-wrap gap-3">
+                                {currentTrendItems.map((item, index) => (
+                                    <TrendPill
+                                        key={index}
+                                        text={activeTrendTab === 'hashtags' ? `#${item.texto_hashtag}` : item.nome}
+                                        count={activeTrendTab === 'hashtags' ? item.contagem_uso : item.contagem}
+                                        rank={index + 1}
+                                        type={activeTrendTab}
                                     />
-                                ) : (
-                                    <div className="w-full h-full bg-gray-300 dark:bg-gray-700"></div>
-                                )}
-                            </div>
-                            <span className="text-text-secondary dark:text-cosmic-text-muted text-lg font-medium">Compartilhe, veja sonhos...</span>
-                        </div>
-                    </div>
-
-                    {/* 3. Bento Grid Content */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Insert Widget "Dicas para Sonhar" in the grid flow */}
-                        <div className="row-span-2 bg-white dark:bg-gradient-to-b dark:from-purple-900/50 dark:to-cosmic-card border border-border dark:border-white/10 rounded-2xl p-6 flex flex-col justify-between shadow-card dark:shadow-lg relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-6 text-yellow-600 dark:text-yellow-300">
-                                    <FaStar className="text-2xl" />
-                                    <h3 className="text-xl font-bold uppercase tracking-wider text-text-main dark:text-white">Dicas para Sonhar</h3>
-                                </div>
-                                <ul className="space-y-4">
-                                    <TipItem icon={<FaMoon className="text-blue-300" />} text="Mantenha um horário de sono regular." />
-                                    <TipItem icon={<FaEye className="text-purple-300" />} text="Faça verificações de realidade durante o dia." />
-                                    <TipItem icon={<FaMobileAlt className="text-red-300" />} text="Evite telas 1h antes de dormir." />
-                                    <TipItem icon={<FaCloud className="text-white/60" />} text="Anote seus sonhos assim que acordar." />
-                                </ul>
-                            </div>
-                            <button className="mt-8 w-full py-3 rounded-lg bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors font-semibold text-sm uppercase tracking-wide text-text-main dark:text-white">
-                                Ver Guia Completo
-                            </button>
-                        </div>
-
-                        {/* Dream Cards - Using filtered dreams */}
-                        {filteredDreams.map((dream) => (
-                            <DreamCard key={dream.id} data={dream} />
-                        ))}
-                        
-                        {filteredDreams.length === 0 && searchQuery && (
-                            <div className="col-span-full text-center py-12 text-gray-500">
-                                <p className="text-lg">Nenhum sonho encontrado para "{searchQuery}"</p>
-                                <button 
-                                    onClick={() => setSearchQuery('')}
-                                    className="mt-4 text-primary dark:text-cosmic-accent hover:underline"
-                                >
-                                    Limpar pesquisa
-                                </button>
+                                ))}
                             </div>
                         )}
                     </div>
+
+                    {/* ============================== */}
+                    {/* 3. TOP COMMUNITY POSTS */}
+                    {/* ============================== */}
+                    <div className="bg-white dark:bg-cosmic-card/80 dark:backdrop-blur-md border border-border dark:border-white/10 rounded-2xl p-6 shadow-card dark:shadow-soft">
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2">
+                                <FaTrophy className="text-yellow-400 text-xl" />
+                                <h2 className="text-xl font-bold text-text-main dark:text-white">Destaques das Comunidades</h2>
+                            </div>
+                            <button
+                                onClick={fetchTopPosts}
+                                className="flex items-center gap-1 text-xs text-primary dark:text-cosmic-accent hover:text-primary-dark dark:hover:text-white transition-colors font-semibold uppercase tracking-wide"
+                            >
+                                <FaRandom size={10} /> Sortear
+                            </button>
+                        </div>
+
+                        {/* Featured Communities Pills */}
+                        {topPosts.comunidades.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-5">
+                                {topPosts.comunidades.map((com) => (
+                                    <button
+                                        key={com.id_comunidade}
+                                        onClick={() => navigate(`/comunidades/${com.id_comunidade}`)}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 border border-border dark:border-white/10 text-xs font-medium text-text-secondary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                                    >
+                                        {com.imagem ? (
+                                            <img src={com.imagem} alt={com.nome} className="w-4 h-4 rounded-full object-cover" />
+                                        ) : (
+                                            <FaUsers className="text-purple-400" size={12} />
+                                        )}
+                                        {com.nome}
+                                        <span className="text-[10px] text-text-secondary/50 dark:text-white/30">{com.membros_count}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Top Posts List */}
+                        {loadingTopPosts ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : topPosts.posts.length === 0 ? (
+                            <p className="text-center text-text-secondary dark:text-cosmic-text-muted py-6 text-sm">
+                                Nenhum post de comunidade encontrado. Entre em comunidades e compartilhe sonhos!
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {topPosts.posts.map((post, index) => (
+                                    <TopPostItem key={post.id_publicacao} post={post} rank={index + 1} navigate={navigate} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
 
                 </div>
 
@@ -278,25 +278,25 @@ const ExplorePage = () => {
                         <h3 className="text-lg font-bold mb-6 text-text-main dark:text-white border-b border-border dark:border-white/5 pb-2">Sugestões para seguir</h3>
                         <div className="space-y-5">
                             {suggestions.map(user => (
-                                <div key={user.id} className="flex items-center justify-between group">
+                                <div key={user.id_usuario} className="flex items-center justify-between group">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden ring-2 ring-transparent group-hover:ring-primary dark:group-hover:ring-cosmic-accent transition-all">
-                                            <img src={`https://i.pravatar.cc/150?u=${user.id + 20}`} alt={user.name} className="w-full h-full object-cover" />
+                                            <img src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.id_usuario}`} alt={user.nome_usuario} className="w-full h-full object-cover" />
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-sm leading-tight text-text-main dark:text-white">{user.name}</p>
-                                            <p className="text-xs text-text-secondary dark:text-cosmic-text-muted">{user.handle}</p>
+                                            <p className="font-semibold text-sm leading-tight text-text-main dark:text-white">{user.nome_completo || user.nome_usuario}</p>
+                                            <p className="text-xs text-text-secondary dark:text-cosmic-text-muted">@{user.nome_usuario}</p>
                                         </div>
                                     </div>
                                     <button 
-                                        onClick={() => toggleFollow(user.id)}
+                                        onClick={() => toggleFollow(user.id_usuario)}
                                         className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-colors shadow-glow ${
-                                            followingUsers.includes(user.id)
+                                            followingUsers.includes(user.id_usuario)
                                                 ? 'bg-green-500 hover:bg-green-600 text-white'
                                                 : 'bg-cosmic-accent hover:bg-violet-600 text-white'
                                         }`}
                                     >
-                                        {followingUsers.includes(user.id) ? (
+                                        {followingUsers.includes(user.id_usuario) ? (
                                             <>
                                                 <FaCheck size={10} />
                                                 Seguindo
@@ -314,6 +314,43 @@ const ExplorePage = () => {
                         <button className="w-full mt-6 text-xs text-primary dark:text-cosmic-accent hover:text-primary-dark dark:hover:text-white transition-colors uppercase tracking-widest font-bold">
                             Ver mais
                         </button>
+                    </div>
+
+
+                    {/* Widget: Dicas de Sono */}
+                    <div className="bg-white dark:bg-gradient-to-b dark:from-purple-900/50 dark:to-cosmic-card border border-border dark:border-white/10 rounded-2xl p-6 shadow-card dark:shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                        <div>
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-300">
+                                    <FaStar className="text-xl" />
+                                    <h3 className="text-lg font-bold uppercase tracking-wider text-text-main dark:text-white">Dicas de Sono</h3>
+                                </div>
+                                <button
+                                    onClick={() => setRandomTips(shuffleTips())}
+                                    className="p-1.5 rounded-lg text-text-secondary dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-primary dark:hover:text-cosmic-accent transition-colors"
+                                    title="Novas dicas"
+                                >
+                                    <FaSyncAlt size={12} />
+                                </button>
+                            </div>
+                            </div>
+                            <div className="min-h-[180px]"> 
+                                <AnimatePresence mode="wait">
+                                    <motion.ul
+                                        key={randomTips.map(t => t.text).join('')} // Trigger animation on change
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{ duration: 0.5 }}
+                                        className="space-y-3"
+                                    >
+                                        {randomTips.map((tip, i) => (
+                                            <TipItem key={i} icon={tip.icon} text={tip.text} />
+                                        ))}
+                                    </motion.ul>
+                                </AnimatePresence>
+                            </div>
                     </div>
 
                     {/* Widget: Insights de Sonhos */}
@@ -357,19 +394,6 @@ const ExplorePage = () => {
 
 /* --- Subcomponents --- */
 
-const FilterPill = ({ title, icon, active, onClick }) => (
-    <button
-        onClick={onClick}
-        className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 border ${active
-            ? 'bg-primary dark:bg-cosmic-accent border-primary dark:border-cosmic-accent text-white shadow-glow'
-            : 'bg-gray-100 dark:bg-white/5 border-border dark:border-white/10 text-text-secondary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 hover:border-gray-300 dark:hover:border-white/30'
-            }`}
-    >
-        {icon}
-        {title}
-    </button>
-);
-
 const TipItem = ({ icon, text }) => (
     <li className="flex items-center gap-3 text-sm text-text-secondary dark:text-gray-300 p-2 rounded-lg bg-gray-100 dark:bg-black/10 hover:bg-gray-200 dark:hover:bg-black/20 transition-colors cursor-default">
         <span className="text-lg">{icon}</span>
@@ -377,39 +401,93 @@ const TipItem = ({ icon, text }) => (
     </li>
 );
 
-const DreamCard = ({ data }) => (
-    <div className="group bg-white dark:bg-cosmic-card border border-border dark:border-white/5 rounded-2xl overflow-hidden hover:border-primary/30 dark:hover:border-white/20 transition-all duration-300 shadow-card hover:shadow-lg dark:hover:shadow-glow flex flex-col h-full">
-        <div className="relative aspect-video overflow-hidden">
-            <img
-                src={data.image}
-                alt={data.title}
-                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-            <div className="absolute bottom-3 left-3">
-                <span className="px-2 py-1 rounded bg-white/20 backdrop-blur-sm text-[10px] font-bold uppercase tracking-wider text-white border border-white/10">
-                    {data.category}
+const TrendTab = ({ label, icon, active, onClick }) => (
+    <button
+        onClick={onClick}
+        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${active
+            ? 'bg-primary/10 dark:bg-cosmic-accent/20 text-primary dark:text-cosmic-accent border border-primary/20 dark:border-cosmic-accent/30'
+            : 'text-text-secondary dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+            }`}
+    >
+        {icon}
+        {label}
+    </button>
+);
+
+const TrendPill = ({ text, count, rank, type }) => {
+    const colors = {
+        hashtags: 'from-blue-500/10 to-purple-500/10 border-blue-500/20 dark:border-blue-400/20 hover:border-blue-500/40',
+        emocoes: 'from-pink-500/10 to-red-500/10 border-pink-500/20 dark:border-pink-400/20 hover:border-pink-500/40',
+        tipos_sonho: 'from-indigo-500/10 to-violet-500/10 border-indigo-500/20 dark:border-indigo-400/20 hover:border-indigo-500/40',
+    };
+
+    return (
+        <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r ${colors[type]} border transition-all hover:scale-[1.02] active:scale-[0.98]`}>
+            {rank <= 3 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                    rank === 1 ? 'bg-yellow-500/20 text-yellow-500' :
+                    rank === 2 ? 'bg-gray-400/20 text-gray-400' :
+                    'bg-amber-600/20 text-amber-600'
+                }`}>
+                    #{rank}
                 </span>
-            </div>
-        </div>
-        <div className="p-5 flex-1 flex flex-col justify-between">
-            <div>
-                <h3 className="text-xl font-bold text-text-main dark:text-white mb-1 group-hover:text-primary dark:group-hover:text-purple-300 transition-colors line-clamp-1">{data.title}</h3>
-                <p className="text-sm text-text-secondary dark:text-cosmic-text-muted mb-4">por <span className="text-text-main dark:text-white hover:underline cursor-pointer">{data.author}</span></p>
+            )}
+            <span className="text-sm font-semibold text-text-main dark:text-white">{text}</span>
+            <span className="text-[10px] text-text-secondary dark:text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
+                {count}
+            </span>
+        </button>
+    );
+};
+
+const TopPostItem = ({ post, rank, navigate }) => {
+    const rankColors = {
+        1: 'text-yellow-500 bg-yellow-500/10',
+        2: 'text-gray-400 bg-gray-400/10',
+        3: 'text-amber-600 bg-amber-600/10',
+    };
+
+    return (
+        <div
+            onClick={() => navigate(`/community/${post.comunidade_id}`)}
+            className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-transparent hover:border-primary/20 dark:hover:border-cosmic-accent/20 transition-all cursor-pointer group"
+        >
+            {/* Rank */}
+            <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black ${
+                rankColors[rank] || 'text-text-secondary dark:text-gray-500 bg-gray-100 dark:bg-white/5'
+            }`}>
+                {rank}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-border dark:border-white/5">
-                <div className="flex gap-4">
-                    <button className="flex items-center gap-1.5 text-text-secondary dark:text-gray-400 hover:text-pink-500 transition-colors text-sm">
-                        <FaHeart /> <span>{data.likes}</span>
-                    </button>
-                    <button className="flex items-center gap-1.5 text-text-secondary dark:text-gray-400 hover:text-blue-400 transition-colors text-sm">
-                        <FaComment /> <span>{data.comments}</span>
-                    </button>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                    {post.comunidade_nome && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-purple-500 dark:text-purple-300 bg-purple-500/10 dark:bg-purple-500/20 px-2 py-0.5 rounded">
+                            {post.comunidade_nome}
+                        </span>
+                    )}
+                </div>
+                <h4 className="text-sm font-bold text-text-main dark:text-white group-hover:text-primary dark:group-hover:text-purple-300 transition-colors truncate">
+                    {post.titulo || post.conteudo_texto?.substring(0, 60) + '...'}
+                </h4>
+                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-text-secondary dark:text-gray-400">
+                    <span>por <strong className="text-text-main dark:text-white">{post.usuario?.nome_usuario}</strong></span>
+                    <span className="flex items-center gap-1"><FaHeart size={10} /> {post.likes_count || 0}</span>
+                    <span className="flex items-center gap-1"><FaRegCommentDots size={10} /> {post.comentarios_count || 0}</span>
                 </div>
             </div>
+
+            {/* Image thumbnail */}
+            {post.imagem && (
+                <div className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden">
+                    <img src={post.imagem} alt="" className="w-full h-full object-cover" />
+                </div>
+            )}
+
+            <FaChevronRight className="flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-primary dark:group-hover:text-cosmic-accent transition-colors mt-3" size={12} />
         </div>
-    </div>
-);
+    );
+};
 
 export default ExplorePage;
