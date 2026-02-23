@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaMoon, FaPlus, FaUserFriends, FaFire } from 'react-icons/fa';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DreamCard from '../components/DreamCard';
 import CreateDreamModal from '../components/CreateDreamModal';
 import { getDreams, getProfile } from '../services/api';
@@ -12,6 +13,18 @@ const Home = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDream, setEditingDream] = useState(null);
     const [activeTab, setActiveTab] = useState('following');
+
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Open create modal if navigated with openCreateModal state (from sidebar button)
+    useEffect(() => {
+        if (location.state?.openCreateModal) {
+            setIsModalOpen(true);
+            // Clear the state so it doesn't re-trigger on refresh
+            navigate('/', { replace: true, state: {} });
+        }
+    }, [location.state]);
 
     const fetchDreams = async (tab = activeTab) => {
         setLoading(true);

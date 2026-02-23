@@ -1,9 +1,10 @@
 import React from 'react';
 import { FaHome, FaMoon, FaUserFriends, FaBookmark, FaPlus } from 'react-icons/fa';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const SidebarLeft = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const isActive = (path) => location.pathname === path;
 
     const menuItems = [
@@ -40,7 +41,10 @@ const SidebarLeft = () => {
             </nav>
 
             {/* New Dream Button */}
-            <button className="w-full h-[45px] bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-full flex items-center justify-center gap-2 shadow-glow hover:opacity-90 transition-all transform hover:scale-[1.02] mb-8">
+            <button
+                onClick={() => navigate('/', { state: { openCreateModal: true } })}
+                className="w-full h-[45px] bg-gradient-to-r from-primary to-secondary text-white font-bold rounded-full flex items-center justify-center gap-2 shadow-glow hover:opacity-90 transition-all transform hover:scale-[1.02] mb-8"
+            >
                 <FaPlus />
                 Novo Sonho
             </button>
