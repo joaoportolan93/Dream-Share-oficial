@@ -352,8 +352,8 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
                     target_user = get_object_or_404(User, pk=user_id)
                     # Respect privacy
                     is_private = target_user.privacidade_padrao == 2
-                    is_following = int(user_id) in list(following_ids)
-                    is_self = int(user_id) == user.id_usuario
+                    is_following = target_user.pk in following_ids
+                    is_self = target_user.pk == user.pk
                     if is_private and not is_following and not is_self:
                         return Publicacao.objects.none()
                     return Publicacao.objects.filter(
@@ -368,8 +368,8 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
                 if user_id:
                     target_user = get_object_or_404(User, pk=user_id)
                     is_private = target_user.privacidade_padrao == 2
-                    is_following = int(user_id) in list(following_ids)
-                    is_self = int(user_id) == user.id_usuario
+                    is_following = target_user.pk in following_ids
+                    is_self = target_user.pk == user.pk
                     if is_private and not is_following and not is_self:
                         return Publicacao.objects.none()
                     return Publicacao.objects.filter(
@@ -385,8 +385,8 @@ class PublicacaoViewSet(viewsets.ModelViewSet):
                 if user_id:
                     target_user = get_object_or_404(User, pk=user_id)
                     is_private = target_user.privacidade_padrao == 2
-                    is_following = int(user_id) in list(following_ids)
-                    is_self = int(user_id) == user.id_usuario
+                    is_following = target_user.pk in following_ids
+                    is_self = target_user.pk == user.pk
                     if is_private and not is_following and not is_self:
                         return Publicacao.objects.none()
                     return Publicacao.objects.filter(
@@ -1072,7 +1072,7 @@ def create_notification(usuario_destino, usuario_origem, tipo, id_referencia=Non
             usuario_destino=usuario_destino,
             usuario_origem=usuario_origem,
             tipo_notificacao=tipo,
-            id_referencia=id_referencia,
+            id_referencia=str(id_referencia) if id_referencia else None,
             conteudo=conteudo
         )
 

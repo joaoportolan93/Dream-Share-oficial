@@ -28,7 +28,6 @@ const Settings = () => {
         // Appearance
         tema_interface: 2, // 1=Light, 2=Dark, 3=System
         idioma: 'pt-BR',
-        mostrar_visualizacoes: true,
     });
 
     // Fetch current user profile
@@ -308,9 +307,6 @@ const Settings = () => {
                             />
                         </SettingRow>
 
-                        <SettingRow icon={FaUser} label="Mostrar visualizações" description="Exibir contagem de visualizações nos seus sonhos">
-                            <ToggleSwitch enabled={settings.mostrar_visualizacoes} onToggle={() => handleToggle('mostrar_visualizacoes')} />
-                        </SettingRow>
                     </div>
 
                     {/* Appearance Section */}

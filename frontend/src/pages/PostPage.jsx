@@ -411,7 +411,7 @@ const PostPage = () => {
 
                     {/* Timestamp */}
                     <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 border-b border-gray-200 dark:border-white/5 pb-4">
-                        {formatDate(post.data_publicacao)} · <span className="text-primary">{post.views_count || 0} Visualizações</span>
+                        {formatDate(post.data_publicacao)}
                     </p>
 
                     {/* Stats Bar */}

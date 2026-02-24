@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import uuid6
 
 class UsuarioManager(BaseUserManager):
     def create_user(self, email, nome_usuario, nome_completo, password=None):
@@ -33,7 +34,7 @@ class UsuarioManager(BaseUserManager):
         return user
 
 class Usuario(AbstractBaseUser):
-    id_usuario = models.AutoField(primary_key=True)
+    id_usuario = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     nome_usuario = models.CharField(max_length=50, unique=True)
     email = models.CharField(max_length=100, unique=True)
     # senha_hash is handled by AbstractBaseUser's password field
@@ -81,7 +82,7 @@ class Usuario(AbstractBaseUser):
         return self.is_admin
 
 class Seguidor(models.Model):
-    id_seguidor = models.AutoField(primary_key=True)
+    id_seguidor = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario_seguidor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='seguindo', db_column='id_usuario_seguidor')
     usuario_seguido = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='seguidores', db_column='id_usuario_seguido')
     data_seguimento = models.DateTimeField(default=timezone.now)
@@ -99,7 +100,7 @@ class Seguidor(models.Model):
         unique_together = ('usuario_seguidor', 'usuario_seguido')
 
 class Publicacao(models.Model):
-    id_publicacao = models.AutoField(primary_key=True)
+    id_publicacao = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     conteudo_texto = models.TextField()
     titulo = models.CharField(max_length=150, null=True, blank=True)
@@ -126,7 +127,7 @@ class Publicacao(models.Model):
         db_table = 'publicacoes'
 
 class MidiaPublicacao(models.Model):
-    id_midia = models.AutoField(primary_key=True)
+    id_midia = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     publicacao = models.ForeignKey(Publicacao, on_delete=models.CASCADE, db_column='id_publicacao')
     
     TIPO_MIDIA_CHOICES = (
@@ -149,7 +150,7 @@ class MidiaPublicacao(models.Model):
         db_table = 'midia_publicacoes'
 
 class Hashtag(models.Model):
-    id_hashtag = models.AutoField(primary_key=True)
+    id_hashtag = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     texto_hashtag = models.CharField(max_length=50, unique=True)
     contagem_uso = models.IntegerField(default=1)
     primeira_utilizacao = models.DateTimeField(default=timezone.now)
@@ -168,7 +169,7 @@ class PublicacaoHashtag(models.Model):
         unique_together = ('publicacao', 'hashtag')
 
 class Comentario(models.Model):
-    id_comentario = models.AutoField(primary_key=True)
+    id_comentario = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     publicacao = models.ForeignKey(Publicacao, on_delete=models.CASCADE, db_column='id_publicacao')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     conteudo_texto = models.TextField(blank=True, default='')
@@ -196,7 +197,7 @@ class Comentario(models.Model):
 
 
 class ReacaoPublicacao(models.Model):
-    id_reacao = models.AutoField(primary_key=True)
+    id_reacao = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     publicacao = models.ForeignKey(Publicacao, on_delete=models.CASCADE, db_column='id_publicacao')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     data_reacao = models.DateTimeField(default=timezone.now)
@@ -206,7 +207,7 @@ class ReacaoPublicacao(models.Model):
         unique_together = ('publicacao', 'usuario')
 
 class PublicacaoSalva(models.Model):
-    id_salvo = models.AutoField(primary_key=True)
+    id_salvo = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     publicacao = models.ForeignKey(Publicacao, on_delete=models.CASCADE, db_column='id_publicacao')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     data_salvo = models.DateTimeField(default=timezone.now)
@@ -216,7 +217,7 @@ class PublicacaoSalva(models.Model):
         unique_together = ('publicacao', 'usuario')
 
 class ReacaoComentario(models.Model):
-    id_reacao = models.AutoField(primary_key=True)
+    id_reacao = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, db_column='id_comentario')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     
@@ -235,7 +236,7 @@ class ReacaoComentario(models.Model):
         unique_together = ('comentario', 'usuario')
 
 class ListaAmigosProximos(models.Model):
-    id_lista = models.AutoField(primary_key=True)
+    id_lista = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario_dono = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario_dono')
     nome_lista = models.CharField(max_length=50, default='Amigos Próximos')
     data_criacao = models.DateTimeField(default=timezone.now)
@@ -254,7 +255,7 @@ class MembroListaAmigos(models.Model):
         unique_together = ('lista', 'usuario_membro')
 
 class Notificacao(models.Model):
-    id_notificacao = models.AutoField(primary_key=True)
+    id_notificacao = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario_destino = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificacoes_recebidas', db_column='id_usuario_destino')
     usuario_origem = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name='notificacoes_geradas', db_column='id_usuario_origem')
     
@@ -266,7 +267,7 @@ class Notificacao(models.Model):
         (5, 'Solicitação de Seguidor'),
     )
     tipo_notificacao = models.SmallIntegerField(choices=TIPO_NOTIFICACAO_CHOICES)
-    id_referencia = models.IntegerField(null=True, blank=True)
+    id_referencia = models.CharField(max_length=36, null=True, blank=True)
     conteudo = models.TextField(null=True, blank=True)
     lida = models.BooleanField(default=False)
     data_criacao = models.DateTimeField(default=timezone.now)
@@ -276,7 +277,7 @@ class Notificacao(models.Model):
         db_table = 'notificacoes'
 
 class ElementoSonho(models.Model):
-    id_elemento = models.AutoField(primary_key=True)
+    id_elemento = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     nome_elemento = models.CharField(max_length=100)
     categoria = models.CharField(max_length=50, null=True, blank=True)
     descricao = models.TextField(null=True, blank=True)
@@ -295,7 +296,7 @@ class PublicacaoElemento(models.Model):
         unique_together = ('publicacao', 'elemento')
 
 class MensagemDireta(models.Model):
-    id_mensagem = models.AutoField(primary_key=True)
+    id_mensagem = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario_remetente = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='mensagens_enviadas', db_column='id_usuario_remetente')
     usuario_destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='mensagens_recebidas', db_column='id_usuario_destinatario')
     conteudo = models.TextField()
@@ -309,7 +310,7 @@ class MensagemDireta(models.Model):
         db_table = 'mensagens_diretas'
 
 class Denuncia(models.Model):
-    id_denuncia = models.AutoField(primary_key=True)
+    id_denuncia = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario_denunciante = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario_denunciante')
     
     TIPO_CONTEUDO_CHOICES = (
@@ -318,7 +319,7 @@ class Denuncia(models.Model):
         (3, 'Usuário'),
     )
     tipo_conteudo = models.SmallIntegerField(choices=TIPO_CONTEUDO_CHOICES)
-    id_conteudo = models.IntegerField()
+    id_conteudo = models.CharField(max_length=36)
     
     MOTIVO_DENUNCIA_CHOICES = (
         (1, 'Conteúdo Inadequado'),
@@ -348,7 +349,7 @@ class Denuncia(models.Model):
         db_table = 'denuncias'
 
 class EstatisticaSonho(models.Model):
-    id_estatistica = models.AutoField(primary_key=True)
+    id_estatistica = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     total_sonhos = models.IntegerField(default=0)
     pesadelos_registrados = models.IntegerField(default=0)
@@ -382,10 +383,8 @@ class ConfiguracaoUsuario(models.Model):
         db_table = 'configuracoes_usuario'
 
 
-
-
 class Comunidade(models.Model):
-    id_comunidade = models.AutoField(primary_key=True)
+    id_comunidade = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     nome = models.CharField(max_length=100, unique=True)
     descricao = models.TextField()
     imagem = models.ImageField(upload_to='community_images/', null=True, blank=True)
@@ -401,7 +400,7 @@ class Comunidade(models.Model):
         return self.nome
 
 class MembroComunidade(models.Model):
-    id_membro = models.AutoField(primary_key=True)
+    id_membro = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     comunidade = models.ForeignKey(Comunidade, on_delete=models.CASCADE, db_column='id_comunidade')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario')
     data_entrada = models.DateTimeField(default=timezone.now)
@@ -427,7 +426,7 @@ class MembroComunidade(models.Model):
 
 
 class BanimentoComunidade(models.Model):
-    id_ban = models.AutoField(primary_key=True)
+    id_ban = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     comunidade = models.ForeignKey(Comunidade, on_delete=models.CASCADE, db_column='id_comunidade', related_name='banimentos')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', related_name='bans_comunidade')
     moderador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, db_column='id_moderador', related_name='bans_aplicados')
@@ -451,7 +450,7 @@ def create_user_settings(sender, instance, created, **kwargs):
 
 class Rascunho(models.Model):
     """Draft model for saving post drafts before publishing"""
-    id_rascunho = models.AutoField(primary_key=True)
+    id_rascunho = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, db_column='id_usuario', related_name='rascunhos')
     comunidade = models.ForeignKey('Comunidade', on_delete=models.SET_NULL, null=True, blank=True, db_column='id_comunidade')
     titulo = models.CharField(max_length=300, null=True, blank=True)
@@ -473,12 +472,12 @@ class Rascunho(models.Model):
         ordering = ['-data_atualizacao']
 
     def __str__(self):
-        return f"Rascunho de {self.usuario.username} - {self.titulo or 'Sem título'}"
+        return f"Rascunho de {self.usuario.nome_usuario} - {self.titulo or 'Sem título'}"
 
 
 class Bloqueio(models.Model):
     """Blocked users - blocked user's content is hidden from the blocker"""
-    id_bloqueio = models.AutoField(primary_key=True)
+    id_bloqueio = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='bloqueios_feitos', db_column='id_usuario')
     usuario_bloqueado = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='bloqueios_recebidos', db_column='id_usuario_bloqueado')
     data_bloqueio = models.DateTimeField(default=timezone.now)
@@ -490,7 +489,7 @@ class Bloqueio(models.Model):
 
 class Silenciamento(models.Model):
     """Muted users - muted user's content is deprioritized/hidden from feed"""
-    id_silenciamento = models.AutoField(primary_key=True)
+    id_silenciamento = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='silenciamentos_feitos', db_column='id_usuario')
     usuario_silenciado = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='silenciamentos_recebidos', db_column='id_usuario_silenciado')
     data_silenciamento = models.DateTimeField(default=timezone.now)
@@ -498,4 +497,3 @@ class Silenciamento(models.Model):
     class Meta:
         db_table = 'silenciamentos'
         unique_together = ('usuario', 'usuario_silenciado')
-
