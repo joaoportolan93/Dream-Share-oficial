@@ -36,30 +36,30 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='profile'),
     path('users/suggested/', SuggestedUsersView.as_view(), name='suggested_users'),
     path('search/', SearchView.as_view(), name='search'),
-    path('users/<int:pk>/', UserDetailView.as_view(), name='user_detail'),
+    path('users/<uuid:pk>/', UserDetailView.as_view(), name='user_detail'),
     path('users/avatar/', AvatarUploadView.as_view(), name='avatar_upload'),
     
     # Follow endpoints
-    path('users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
-    path('users/<int:pk>/followers/', UserFollowersView.as_view(), name='user-followers'),
-    path('users/<int:pk>/following/', UserFollowingView.as_view(), name='user-following'),
-    path('users/<int:pk>/block/', BlockView.as_view(), name='block'),
-    path('users/<int:pk>/mute/', MuteView.as_view(), name='mute'),
+    path('users/<uuid:pk>/follow/', FollowView.as_view(), name='follow'),
+    path('users/<uuid:pk>/followers/', UserFollowersView.as_view(), name='user-followers'),
+    path('users/<uuid:pk>/following/', UserFollowingView.as_view(), name='user-following'),
+    path('users/<uuid:pk>/block/', BlockView.as_view(), name='block'),
+    path('users/<uuid:pk>/mute/', MuteView.as_view(), name='mute'),
     
     # Follow requests endpoints
     path('follow-requests/', FollowRequestsView.as_view(), name='follow-requests'),
-    path('follow-requests/<int:pk>/action/', FollowRequestActionView.as_view(), name='follow-request-action'),
+    path('follow-requests/<uuid:pk>/action/', FollowRequestActionView.as_view(), name='follow-request-action'),
     
     # Comments endpoints (nested under dreams)
-    path('dreams/<int:dream_pk>/comments/', comments_list, name='dream-comments-list'),
-    path('dreams/<int:dream_pk>/comments/<int:pk>/', comments_detail, name='dream-comments-detail'),
+    path('dreams/<uuid:dream_pk>/comments/', comments_list, name='dream-comments-list'),
+    path('dreams/<uuid:dream_pk>/comments/<uuid:pk>/', comments_detail, name='dream-comments-detail'),
     
     # Admin endpoints - Issue #29
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
     path('admin/users/', AdminUsersView.as_view(), name='admin-users'),
-    path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
+    path('admin/users/<uuid:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
     path('admin/reports/', AdminReportsView.as_view(), name='admin-reports'),
-    path('admin/reports/<int:pk>/action/', AdminReportActionView.as_view(), name='admin-report-action'),
+    path('admin/reports/<uuid:pk>/action/', AdminReportActionView.as_view(), name='admin-report-action'),
     
     # User reports
     path('denuncias/', CreateReportView.as_view(), name='create-report'),
@@ -67,7 +67,7 @@ urlpatterns = [
     # Settings and Close Friends endpoints
     path('settings/', UserSettingsView.as_view(), name='user-settings'),
     path('friends/manage/', CloseFriendsManagerView.as_view(), name='close-friends-manage'),
-    path('friends/toggle/<int:pk>/', ToggleCloseFriendView.as_view(), name='close-friends-toggle'),
+    path('friends/toggle/<uuid:pk>/', ToggleCloseFriendView.as_view(), name='close-friends-toggle'),
     
     # Explore page endpoints
     path('trends/', TrendView.as_view(), name='trends'),

@@ -148,7 +148,7 @@ class PublicacaoSerializer(serializers.ModelSerializer):
     comentarios_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
-    comunidade_id = serializers.IntegerField(source='comunidade.id_comunidade', read_only=True, default=None)
+    comunidade_id = serializers.UUIDField(source='comunidade.id_comunidade', read_only=True, default=None)
     comunidade_nome = serializers.CharField(source='comunidade.nome', read_only=True, default=None)
     
     class Meta:
@@ -420,7 +420,7 @@ class UserSettingsSerializer(serializers.ModelSerializer):
 
 class CloseFriendSerializer(serializers.ModelSerializer):
     """Serializer for followers with close friend status"""
-    id_usuario = serializers.IntegerField(source='usuario_seguidor.id_usuario', read_only=True)
+    id_usuario = serializers.UUIDField(source='usuario_seguidor.id_usuario', read_only=True)
     nome_usuario = serializers.CharField(source='usuario_seguidor.nome_usuario', read_only=True)
     nome_completo = serializers.CharField(source='usuario_seguidor.nome_completo', read_only=True)
     avatar_url = serializers.SerializerMethodField()
@@ -542,8 +542,8 @@ class CommunityStatsSerializer(serializers.Serializer):
 
 class BanimentoComunidadeSerializer(serializers.Serializer):
     """Serializer for community bans"""
-    id_ban = serializers.IntegerField()
-    user_id = serializers.IntegerField(source='usuario.id_usuario')
+    id_ban = serializers.UUIDField(read_only=True)
+    user_id = serializers.UUIDField(source='usuario.id_usuario', read_only=True)
     username = serializers.CharField(source='usuario.nome_usuario')
     nome_completo = serializers.CharField(source='usuario.nome_completo')
     avatar_url = serializers.SerializerMethodField()

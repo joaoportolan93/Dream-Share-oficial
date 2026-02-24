@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-    FaRegComment, FaRetweet, FaHeart, FaRegHeart, FaChartBar, 
+import {
+    FaRegComment, FaRetweet, FaHeart, FaRegHeart,
     FaBookmark, FaRegBookmark, FaShare, FaEllipsisH,
     FaEdit, FaTrash, FaFlag, FaBan, FaVolumeMute,
     FaCheck, FaTimes, FaPlay
@@ -48,9 +48,9 @@ const Comment = ({
         const diffDays = Math.floor(diffMs / 86400000);
 
         if (diffMins < 1) return 'agora';
-        if (diffMins < 60) return `${diffMins}min`;
-        if (diffHours < 24) return `${diffHours}h`;
-        if (diffDays < 7) return `${diffDays}d`;
+        if (diffMins < 60) return `${diffMins} min`;
+        if (diffHours < 24) return `${diffHours} h`;
+        if (diffDays < 7) return `${diffDays} d`;
         return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
     };
 
@@ -65,10 +65,10 @@ const Comment = ({
     // Build "Em resposta a" text
     const getReplyingToText = () => {
         if (!comment.replying_to) return null;
-        
+
         const commentAuthor = comment.replying_to.comment_author?.nome_usuario;
         const postOwner = comment.replying_to.post_owner?.nome_usuario;
-        
+
         if (postOwner && commentAuthor !== postOwner) {
             return (
                 <span className="text-gray-500 text-xs mb-1 block">
@@ -79,7 +79,7 @@ const Comment = ({
                 </span>
             );
         }
-        
+
         if (commentAuthor) {
             return (
                 <span className="text-gray-500 text-xs mb-1 block">
@@ -88,7 +88,7 @@ const Comment = ({
                 </span>
             );
         }
-        
+
         return null;
     };
 
@@ -139,7 +139,7 @@ const Comment = ({
     const handleShare = async () => {
         try {
             await navigator.clipboard.writeText(
-                `${window.location.origin}/post/${dreamId}#comment-${comment.id_comentario}`
+                `${window.location.origin} /post/${dreamId} #comment - ${comment.id_comentario} `
             );
             // TODO: Show toast notification
         } catch (err) {
@@ -162,7 +162,7 @@ const Comment = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 className="relative"
-                id={`comment-${comment.id_comentario}`}
+                id={`comment - ${comment.id_comentario} `}
             >
                 {/* SVG Parent-to-children line */}
                 {hasReplies && showThreadLine && depth < maxDepth && (
@@ -348,9 +348,8 @@ const Comment = ({
                                 </button>
                                 <button
                                     onClick={handleLike}
-                                    className={`flex items-center gap-1 group transition-colors ${
-                                        isLiked ? 'text-pink-500' : 'text-gray-500 hover:text-pink-500'
-                                    }`}
+                                    className={`flex items - center gap - 1 group transition - colors ${isLiked ? 'text-pink-500' : 'text-gray-500 hover:text-pink-500'
+                                        } `}
                                 >
                                     <span className="p-2 rounded-full group-hover:bg-pink-500/10 transition-colors">
                                         {isLiked ? <FaHeart size={16} /> : <FaRegHeart size={16} />}
@@ -359,20 +358,12 @@ const Comment = ({
                                         <span className="text-xs">{formatCount(likesCount)}</span>
                                     )}
                                 </button>
-                                <button className="flex items-center gap-1 text-gray-500 hover:text-primary group transition-colors">
-                                    <span className="p-2 rounded-full group-hover:bg-primary/10 transition-colors">
-                                        <FaChartBar size={16} />
-                                    </span>
-                                    {comment.views_count > 0 && (
-                                        <span className="text-xs">{formatCount(comment.views_count)}</span>
-                                    )}
-                                </button>
+
                                 <div className="flex items-center">
                                     <button
                                         onClick={handleSave}
-                                        className={`p-2 rounded-full transition-colors ${
-                                            isSaved ? 'text-primary' : 'text-gray-500 hover:text-primary hover:bg-primary/10'
-                                        }`}
+                                        className={`p - 2 rounded - full transition - colors ${isSaved ? 'text-primary' : 'text-gray-500 hover:text-primary hover:bg-primary/10'
+                                            } `}
                                     >
                                         {isSaved ? <FaBookmark size={16} /> : <FaRegBookmark size={16} />}
                                     </button>
