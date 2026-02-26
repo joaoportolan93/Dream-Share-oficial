@@ -47,6 +47,17 @@ class Usuario(AbstractBaseUser):
     is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)  # Required for authentication
     
+    # Security question for password reset
+    PERGUNTA_SECRETA_CHOICES = (
+        (1, 'Qual o nome do seu primeiro animal de estimação?'),
+        (2, 'Qual o nome da sua cidade natal?'),
+        (3, 'Qual era o nome da sua escola primária?'),
+        (4, 'Qual o nome do seu melhor amigo de infância?'),
+        (5, 'Qual o modelo do seu primeiro carro?'),
+    )
+    pergunta_secreta = models.SmallIntegerField(choices=PERGUNTA_SECRETA_CHOICES, null=True, blank=True)
+    resposta_secreta = models.CharField(max_length=128, null=True, blank=True)  # Stored as hash
+    
     STATUS_CHOICES = (
         (1, 'Ativo'),
         (2, 'Suspenso'),

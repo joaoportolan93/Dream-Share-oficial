@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password, check_password
 
 User = get_user_model()
 
@@ -70,18 +71,26 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    pergunta_secreta = serializers.IntegerField(required=False)
+    resposta_secreta = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ('nome_usuario', 'email', 'nome_completo', 'password')
+        fields = ('nome_usuario', 'email', 'nome_completo', 'password', 'pergunta_secreta', 'resposta_secreta')
 
     def create(self, validated_data):
+        resposta = validated_data.pop('resposta_secreta', None)
+        pergunta = validated_data.pop('pergunta_secreta', None)
         user = User.objects.create_user(
             email=validated_data['email'],
             nome_usuario=validated_data['nome_usuario'],
             nome_completo=validated_data['nome_completo'],
             password=validated_data['password']
         )
+        if pergunta and resposta:
+            user.pergunta_secreta = pergunta
+            user.resposta_secreta = make_password(resposta.strip().lower())
+            user.save(update_fields=['pergunta_secreta', 'resposta_secreta'])
         return user
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -114,20 +123,33 @@ class LogoutSerializer(serializers.Serializer):
 
 
 class PasswordResetSerializer(serializers.Serializer):
-    """Serializer for password reset - verifies identity via email + username"""
+    """Serializer for password reset - verifies identity via email + username + secret answer"""
     email = serializers.EmailField()
     nome_usuario = serializers.CharField()
+    resposta_secreta = serializers.CharField(write_only=True)
     new_password = serializers.CharField(min_length=6, write_only=True)
 
     def validate(self, attrs):
         email = attrs.get('email', '').lower()
         nome_usuario = attrs.get('nome_usuario', '')
+        resposta = attrs.get('resposta_secreta', '').strip().lower()
         try:
             user = User.objects.get(email__iexact=email, nome_usuario=nome_usuario)
         except User.DoesNotExist:
             raise serializers.ValidationError(
                 'Não foi possível verificar sua identidade. Verifique o email e nome de usuário.'
             )
+        
+        # Verify the secret answer
+        if not user.resposta_secreta:
+            raise serializers.ValidationError(
+                'Este usuário não configurou uma pergunta secreta. Entre em contato com o suporte.'
+            )
+        if not check_password(resposta, user.resposta_secreta):
+            raise serializers.ValidationError(
+                'Resposta secreta incorreta.'
+            )
+        
         attrs['user'] = user
         return attrs
 
