@@ -87,11 +87,21 @@ class RegisterSerializer(serializers.ModelSerializer):
             nome_completo=validated_data['nome_completo'],
             password=validated_data['password']
         )
-        if pergunta and resposta:
+        if pergunta is not None and resposta:
             user.pergunta_secreta = pergunta
+            # Normalize to lowercase before hashing for consistent comparison
             user.resposta_secreta = make_password(resposta.strip().lower())
             user.save(update_fields=['pergunta_secreta', 'resposta_secreta'])
         return user
+
+    def validate(self, attrs):
+        pergunta = attrs.get('pergunta_secreta')
+        resposta = attrs.get('resposta_secreta')
+        if (pergunta is not None) != (resposta is not None):
+            raise serializers.ValidationError(
+                'Both pergunta_secreta and resposta_secreta must be provided together.'
+            )
+        return attrs
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile"""
@@ -132,22 +142,26 @@ class PasswordResetSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get('email', '').lower()
         nome_usuario = attrs.get('nome_usuario', '')
+        # Normalize to lowercase before checking, consistent with how the answer was stored
         resposta = attrs.get('resposta_secreta', '').strip().lower()
         try:
             user = User.objects.get(email__iexact=email, nome_usuario=nome_usuario)
         except User.DoesNotExist:
+            # Use a generic message to avoid revealing whether the user exists
             raise serializers.ValidationError(
-                'Não foi possível verificar sua identidade. Verifique o email e nome de usuário.'
+                'Não foi possível verificar sua identidade. Verifique suas informações e tente novamente.'
             )
         
         # Verify the secret answer
         if not user.resposta_secreta:
+            # Same generic message, regardless of whether there is a configured secret question
             raise serializers.ValidationError(
-                'Este usuário não configurou uma pergunta secreta. Entre em contato com o suporte.'
+                'Não foi possível verificar sua identidade. Verifique suas informações e tente novamente.'
             )
         if not check_password(resposta, user.resposta_secreta):
+            # Same generic message for wrong answers as well
             raise serializers.ValidationError(
-                'Resposta secreta incorreta.'
+                'Não foi possível verificar sua identidade. Verifique suas informações e tente novamente.'
             )
         
         attrs['user'] = user

@@ -231,7 +231,8 @@ class AvatarUploadView(APIView):
         
         # Delete old avatar file if it exists
         if request.user.avatar_url:
-            old_path = os.path.join(settings.BASE_DIR, request.user.avatar_url.lstrip('/'))
+            old_filename = os.path.basename(request.user.avatar_url)
+            old_path = os.path.join(settings.MEDIA_ROOT, 'avatars', old_filename)
             if os.path.isfile(old_path):
                 try:
                     os.remove(old_path)

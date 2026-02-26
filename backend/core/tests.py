@@ -310,3 +310,271 @@ class TestFollowersList:
         response = auth_client.get(url)
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
+
+
+@pytest.mark.django_db
+class TestSecretQuestion:
+    """Tests for secret question registration and password reset"""
+
+    def test_register_with_secret_question(self, api_client):
+        """Registration with both pergunta_secreta and resposta_secreta should succeed"""
+        url = reverse('register')
+        data = {
+            'nome_usuario': 'secretuser',
+            'email': 'secret@example.com',
+            'nome_completo': 'Secret User',
+            'password': 'password123',
+            'pergunta_secreta': 1,
+            'resposta_secreta': 'myanswer',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_201_CREATED
+        user = Usuario.objects.get(email='secret@example.com')
+        assert user.pergunta_secreta == 1
+        assert user.resposta_secreta is not None
+
+    def test_register_without_secret_question(self, api_client):
+        """Registration without secret fields should succeed (they are optional)"""
+        url = reverse('register')
+        data = {
+            'nome_usuario': 'nosecret',
+            'email': 'nosecret@example.com',
+            'nome_completo': 'No Secret User',
+            'password': 'password123',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_201_CREATED
+        user = Usuario.objects.get(email='nosecret@example.com')
+        assert user.pergunta_secreta is None
+        assert user.resposta_secreta is None
+
+    def test_register_with_only_pergunta_fails(self, api_client):
+        """Providing only pergunta_secreta without resposta_secreta should fail"""
+        url = reverse('register')
+        data = {
+            'nome_usuario': 'partialuser',
+            'email': 'partial@example.com',
+            'nome_completo': 'Partial User',
+            'password': 'password123',
+            'pergunta_secreta': 1,
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_password_reset_with_correct_answer(self, api_client):
+        """Password reset with correct secret answer should succeed"""
+        from django.contrib.auth.hashers import make_password
+        user = UsuarioFactory(email='reset@example.com', nome_usuario='resetuser')
+        user.pergunta_secreta = 1
+        user.resposta_secreta = make_password('correct answer')
+        user.save()
+
+        url = reverse('password_reset')
+        data = {
+            'email': 'reset@example.com',
+            'nome_usuario': 'resetuser',
+            'resposta_secreta': 'correct answer',
+            'new_password': 'newpassword123',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_password_reset_with_wrong_answer(self, api_client):
+        """Password reset with wrong secret answer should fail with generic message"""
+        from django.contrib.auth.hashers import make_password
+        user = UsuarioFactory(email='wronganswer@example.com', nome_usuario='wrongansweruser')
+        user.pergunta_secreta = 1
+        user.resposta_secreta = make_password('correct answer')
+        user.save()
+
+        url = reverse('password_reset')
+        data = {
+            'email': 'wronganswer@example.com',
+            'nome_usuario': 'wrongansweruser',
+            'resposta_secreta': 'wrong answer',
+            'new_password': 'newpassword123',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        error_text = str(response.data)
+        assert 'Não foi possível verificar sua identidade' in error_text
+
+    def test_password_reset_user_without_secret_question(self, api_client):
+        """Password reset for user without secret question should fail with generic message"""
+        user = UsuarioFactory(email='nosecret2@example.com', nome_usuario='nosecret2user')
+
+        url = reverse('password_reset')
+        data = {
+            'email': 'nosecret2@example.com',
+            'nome_usuario': 'nosecret2user',
+            'resposta_secreta': 'some answer',
+            'new_password': 'newpassword123',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        error_text = str(response.data)
+        assert 'Não foi possível verificar sua identidade' in error_text
+
+    def test_password_reset_nonexistent_user(self, api_client):
+        """Password reset for nonexistent user should fail with generic message"""
+        url = reverse('password_reset')
+        data = {
+            'email': 'nobody@example.com',
+            'nome_usuario': 'nobody',
+            'resposta_secreta': 'any answer',
+            'new_password': 'newpassword123',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        error_text = str(response.data)
+        assert 'Não foi possível verificar sua identidade' in error_text
+
+    def test_password_reset_answer_case_insensitive(self, api_client):
+        """Secret answer comparison should be case-insensitive"""
+        from django.contrib.auth.hashers import make_password
+        user = UsuarioFactory(email='casetest@example.com', nome_usuario='casetestuser')
+        user.pergunta_secreta = 1
+        # Stored as lowercase
+        user.resposta_secreta = make_password('correct answer')
+        user.save()
+
+        url = reverse('password_reset')
+        data = {
+            'email': 'casetest@example.com',
+            'nome_usuario': 'casetestuser',
+            'resposta_secreta': 'CORRECT ANSWER',
+            'new_password': 'newpassword123',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_password_reset_answer_with_special_chars(self, api_client):
+        """Secret answer with special characters should work correctly"""
+        from django.contrib.auth.hashers import make_password
+        user = UsuarioFactory(email='special@example.com', nome_usuario='specialuser')
+        user.pergunta_secreta = 1
+        user.resposta_secreta = make_password('answer!@#$%')
+        user.save()
+
+        url = reverse('password_reset')
+        data = {
+            'email': 'special@example.com',
+            'nome_usuario': 'specialuser',
+            'resposta_secreta': 'answer!@#$%',
+            'new_password': 'newpassword123',
+        }
+        response = api_client.post(url, data)
+        assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+class TestAvatarUpload:
+    """Tests for avatar upload and old avatar cleanup"""
+
+    def test_avatar_upload_success(self, auth_client, tmp_path):
+        """Avatar upload should succeed with valid image file"""
+        import io
+        url = reverse('avatar_upload')
+        image_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        image_file = io.BytesIO(image_content)
+        image_file.name = 'test.png'
+        response = auth_client.post(url, {'avatar': image_file}, format='multipart')
+        assert response.status_code == status.HTTP_200_OK
+        assert 'avatar_url' in response.data
+
+    def test_avatar_upload_deletes_old_avatar(self, auth_client, user, tmp_path):
+        """Old avatar file should be deleted when a new one is uploaded"""
+        import io
+        import os
+        from django.conf import settings
+
+        # Create a fake old avatar file
+        avatars_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
+        os.makedirs(avatars_dir, exist_ok=True)
+        old_filename = 'old_avatar_test.png'
+        old_filepath = os.path.join(avatars_dir, old_filename)
+        with open(old_filepath, 'wb') as f:
+            f.write(b'fake image content')
+
+        # Set the user's avatar_url to point to the old file
+        user.avatar_url = f'{settings.MEDIA_URL}avatars/{old_filename}'
+        user.save()
+
+        # Upload a new avatar
+        image_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        image_file = io.BytesIO(image_content)
+        image_file.name = 'new_avatar.png'
+
+        url = reverse('avatar_upload')
+        response = auth_client.post(url, {'avatar': image_file}, format='multipart')
+
+        assert response.status_code == status.HTTP_200_OK
+        # Old file should be deleted
+        assert not os.path.exists(old_filepath)
+
+    def test_avatar_upload_succeeds_when_old_file_missing(self, auth_client, user):
+        """Upload should succeed even if old avatar file cannot be found"""
+        import io
+        from django.conf import settings
+
+        # Set avatar_url to a non-existent file
+        user.avatar_url = f'{settings.MEDIA_URL}avatars/nonexistent_file.png'
+        user.save()
+
+        image_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        image_file = io.BytesIO(image_content)
+        image_file.name = 'new_avatar.png'
+
+        url = reverse('avatar_upload')
+        response = auth_client.post(url, {'avatar': image_file}, format='multipart')
+
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_avatar_upload_no_previous_avatar(self, auth_client, user):
+        """Upload should succeed when user has no previous avatar"""
+        import io
+
+        user.avatar_url = None
+        user.save()
+
+        image_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        image_file = io.BytesIO(image_content)
+        image_file.name = 'new_avatar.png'
+
+        url = reverse('avatar_upload')
+        response = auth_client.post(url, {'avatar': image_file}, format='multipart')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert 'avatar_url' in response.data
+
+    def test_avatar_upload_invalid_extension(self, auth_client):
+        """Upload with disallowed file extension should fail"""
+        import io
+        url = reverse('avatar_upload')
+        file_content = b'not an image'
+        file_obj = io.BytesIO(file_content)
+        file_obj.name = 'test.txt'
+        response = auth_client.post(url, {'avatar': file_obj}, format='multipart')
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_avatar_path_uses_media_root(self, auth_client, user):
+        """Avatar file path should be built using MEDIA_ROOT"""
+        import io
+        import os
+        from django.conf import settings
+
+        url = reverse('avatar_upload')
+        image_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        image_file = io.BytesIO(image_content)
+        image_file.name = 'test.png'
+
+        response = auth_client.post(url, {'avatar': image_file}, format='multipart')
+        assert response.status_code == status.HTTP_200_OK
+
+        user.refresh_from_db()
+        # The avatar_url should be a relative URL starting with MEDIA_URL
+        assert user.avatar_url.startswith(settings.MEDIA_URL)
+        # The file should exist under MEDIA_ROOT
+        filename = os.path.basename(user.avatar_url)
+        expected_path = os.path.join(settings.MEDIA_ROOT, 'avatars', filename)
+        assert os.path.exists(expected_path)
