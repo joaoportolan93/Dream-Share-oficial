@@ -229,6 +229,15 @@ class AvatarUploadView(APIView):
         avatars_dir = os.path.join(settings.MEDIA_ROOT, 'avatars')
         os.makedirs(avatars_dir, exist_ok=True)
         
+        # Delete old avatar file if it exists
+        if request.user.avatar_url:
+            old_path = os.path.join(settings.BASE_DIR, request.user.avatar_url.lstrip('/'))
+            if os.path.isfile(old_path):
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass  # Silently ignore if file can't be deleted
+        
         # Save file
         filepath = os.path.join(avatars_dir, filename)
         with open(filepath, 'wb+') as destination:
@@ -238,7 +247,7 @@ class AvatarUploadView(APIView):
         # Update user's avatar_url
         avatar_url = f"{settings.MEDIA_URL}avatars/{filename}"
         request.user.avatar_url = avatar_url
-        request.user.save()
+        request.user.save(update_fields=['avatar_url'])
         
         # Build absolute URL for response
         absolute_avatar_url = request.build_absolute_uri(avatar_url)
