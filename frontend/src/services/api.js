@@ -44,6 +44,8 @@ api.interceptors.response.use(
 );
 
 // Auth endpoints
+export const login = (data) => api.post('/api/auth/login/', data);
+export const register = (data) => api.post('/api/auth/register/', data);
 export const logout = async () => {
     const refresh = localStorage.getItem('refresh');
     try {
