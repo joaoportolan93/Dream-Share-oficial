@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { FaPlay, FaPause } from 'react-icons/fa';
 import '../styles/Auth.css';
 
 const Login = () => {
@@ -10,6 +11,7 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(true);
 
     // Refs para Efeito Ambilight
     const videoRef = useRef(null);
@@ -48,6 +50,17 @@ const Login = () => {
 
         return () => cancelAnimationFrame(animationFrameId);
     }, []);
+
+    const toggleVideo = () => {
+        if (videoRef.current) {
+            if (isPlaying) {
+                videoRef.current.pause();
+            } else {
+                videoRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -94,7 +107,18 @@ const Login = () => {
                 transition={{ duration: 0.6, ease: "easeOut" }}
             >
                 {/* Lado Esquerdo: Vídeo e Boas Vindas */}
-                <div className="login-left-panel">
+                <div className="login-left-panel" style={{ position: 'relative' }}>
+                    <button
+                        type="button"
+                        onClick={toggleVideo}
+                        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-black/40 text-white"
+                        style={{ opacity: 0.25, transition: 'opacity 0.3s', cursor: 'pointer' }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.25'}
+                        title={isPlaying ? "Pausar vídeo" : "Reproduzir vídeo"}
+                    >
+                        {isPlaying ? <FaPause size={16} /> : <FaPlay size={16} />}
+                    </button>
                     <video
                         ref={videoRef}
                         src="/video_login.mp4"
