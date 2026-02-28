@@ -89,12 +89,23 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
 
     const handleDelete = async () => {
         if (!window.confirm('Tem certeza que deseja excluir este sonho?')) return;
+
+        if (!dream.id_publicacao) {
+            console.error('Delete failed: dream.id_publicacao is undefined', dream);
+            alert('Erro: ID do post não encontrado.');
+            return;
+        }
+
         setDeleting(true);
         try {
+            console.log('Deleting dream:', dream.id_publicacao);
             await deleteDream(dream.id_publicacao);
+            console.log('Dream deleted successfully');
             onDelete?.(dream.id_publicacao);
         } catch (err) {
             console.error('Error deleting dream:', err);
+            const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.message || 'Erro desconhecido';
+            alert(`Erro ao excluir o sonho: ${errorMsg}`);
         } finally {
             setDeleting(false);
             setShowMenu(false);
@@ -324,6 +335,21 @@ const DreamCard = ({ dream, onDelete, onEdit, currentUserId }) => {
             {dream.imagem && (
                 <div className="mb-4 rounded-xl overflow-hidden border border-gray-100 dark:border-white/5">
                     <img src={dream.imagem} alt="Dream visual" className="w-full h-auto max-h-[500px] object-cover" />
+                </div>
+            )}
+
+            {/* Video */}
+            {dream.video && (
+                <div className="mb-4 rounded-xl overflow-hidden border border-gray-100 dark:border-white/5 bg-black/5">
+                    <video
+                        src={dream.video}
+                        controls
+                        className="w-full h-auto max-h-[500px] object-contain"
+                        preload="metadata"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        Seu navegador não suporta a tag de vídeo.
+                    </video>
                 </div>
             )}
 

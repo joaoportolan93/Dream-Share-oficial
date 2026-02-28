@@ -398,6 +398,20 @@ const PostPage = () => {
                         </div>
                     )}
 
+                    {/* Video */}
+                    {post.video && (
+                        <div className="mb-4 rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black/5">
+                            <video
+                                src={post.video}
+                                controls
+                                className="w-full h-auto max-h-[600px] object-contain"
+                                preload="metadata"
+                            >
+                                Seu navegador não suporta a tag de vídeo.
+                            </video>
+                        </div>
+                    )}
+
                     {/* Emotions */}
                     {post.emocoes_sentidas && (
                         <div className="flex flex-wrap gap-2 mb-4">

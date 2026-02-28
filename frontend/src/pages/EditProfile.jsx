@@ -64,13 +64,30 @@ const EditProfile = () => {
                 await uploadAvatar(avatarFile);
             }
 
+            // Limpar campos vazios - Django DateField não aceita string vazia ("")
+            const cleanedData = {};
+            for (const [key, value] of Object.entries(formData)) {
+                if (value !== '' && value !== undefined) {
+                    cleanedData[key] = value;
+                }
+            }
+
             // Update profile data
-            await updateUser(user.id_usuario, formData);
+            await updateUser(user.id_usuario, cleanedData);
 
             setSuccess('Perfil atualizado com sucesso!');
             setTimeout(() => navigate('/profile'), 1500);
         } catch (err) {
-            setError(err.response?.data?.error || 'Erro ao atualizar perfil');
+            // Tenta mostrar erros detalhados do serializer
+            const errData = err.response?.data;
+            if (errData && typeof errData === 'object' && !errData.error) {
+                const messages = Object.entries(errData)
+                    .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                    .join(' | ');
+                setError(messages);
+            } else {
+                setError(errData?.error || 'Erro ao atualizar perfil');
+            }
         } finally {
             setSaving(false);
         }

@@ -577,6 +577,10 @@
     background: rgba(255, 255, 255, 0.05) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: #fff !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    border-radius: 12px !important;
+    /* Bordas arredondadas do input */
 }
 
 .immersive-input:focus {
