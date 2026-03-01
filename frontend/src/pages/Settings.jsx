@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaCog, FaBell, FaLock, FaPalette, FaUser, FaSave, FaArrowLeft, FaShieldAlt, FaStar, FaSearch, FaUserFriends } from 'react-icons/fa';
+import { FaCog, FaBell, FaLock, FaPalette, FaUser, FaSave, FaArrowLeft, FaShieldAlt, FaStar, FaSearch, FaUserFriends, FaFire } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, getUserSettings, updateUserSettings, getCloseFriendsManage, toggleCloseFriend, patchUser } from '../services/api';
 
@@ -28,6 +28,7 @@ const Settings = () => {
         // Appearance
         tema_interface: 2, // 1=Light, 2=Dark, 3=System
         idioma: 'pt-BR',
+        mostrar_feed_algoritmico: true,
     });
 
     // Fetch current user profile
@@ -180,7 +181,7 @@ const Settings = () => {
     const ToggleSwitch = ({ enabled, onToggle }) => (
         <button
             onClick={onToggle}
-            className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}
+            className={`flex-shrink-0 relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}
         >
             <span
                 className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${enabled ? 'left-7' : 'left-1'}`}
@@ -338,6 +339,25 @@ const Settings = () => {
                                 <option value="en">English</option>
                                 <option value="es">Español</option>
                             </select>
+                        </SettingRow>
+                    </div>
+
+                    {/* Feed Content Section */}
+                    <div className="bg-white dark:bg-white/5 shadow-card dark:shadow-none backdrop-blur-sm rounded-2xl p-6 mb-6 border border-white/10">
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <FaFire className="text-primary" />
+                            Conteúdo do Feed
+                        </h2>
+
+                        <SettingRow
+                            icon={FaFire}
+                            label="Feed 'Para Você'"
+                            description="Mostrar o feed de recomendação algorítmica na página inicial. Se desativado, você verá apenas conteúdos de quem você segue."
+                        >
+                            <ToggleSwitch
+                                enabled={settings.mostrar_feed_algoritmico}
+                                onToggle={() => handleToggle('mostrar_feed_algoritmico')}
+                            />
                         </SettingRow>
                     </div>
 

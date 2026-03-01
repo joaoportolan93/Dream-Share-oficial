@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-    FaArrowLeft, FaHeart, FaRegHeart, FaRegComment, 
+import {
+    FaArrowLeft, FaHeart, FaRegHeart, FaRegComment,
     FaRegBookmark, FaShare, FaEllipsisH,
     FaEdit, FaTrash, FaFlag, FaBan, FaVolumeMute
 } from 'react-icons/fa';
@@ -9,12 +9,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { likeComment, deleteComment } from '../services/api';
 import { ChildBranch, ParentLine } from './ThreadConnectorSVG';
 
-const CommentDetailModal = ({ 
-    isOpen, 
-    onClose, 
-    comment, 
-    dreamId, 
-    currentUserId, 
+const CommentDetailModal = ({
+    isOpen,
+    onClose,
+    comment,
+    dreamId,
+    currentUserId,
     postOwnerId,
     onDelete,
     onUpdate,
@@ -152,9 +152,8 @@ const CommentDetailModal = ({
                             {/* Like */}
                             <button
                                 onClick={handleReplyLike}
-                                className={`flex items-center gap-2 transition-colors ${
-                                    replyLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
-                                }`}
+                                className={`flex items-center gap-2 transition-colors ${replyLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                                    }`}
                             >
                                 {replyLiked ? <FaHeart /> : <FaRegHeart />}
                                 {replyLikesCount > 0 && <span className="text-sm font-medium">{replyLikesCount}</span>}
@@ -186,9 +185,9 @@ const CommentDetailModal = ({
                 {replyHasReplies && depth < 5 && (
                     <div className="pl-[52px]">
                         {reply.respostas.map((nestedReply, idx) => (
-                            <ReplyItem 
-                                key={nestedReply.id_comentario} 
-                                reply={nestedReply} 
+                            <ReplyItem
+                                key={nestedReply.id_comentario}
+                                reply={nestedReply}
                                 depth={depth + 1}
                                 isLast={idx === reply.respostas.length - 1}
                             />
@@ -269,7 +268,7 @@ const CommentDetailModal = ({
                                             <div className="absolute right-0 top-10 z-50 bg-white dark:bg-[#1a1a2e] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl py-1 min-w-[160px]">
                                                 {isOwner && (
                                                     <>
-                                                        <button 
+                                                        <button
                                                             onClick={() => { setShowMenu(false); }}
                                                             className="flex items-center gap-3 w-full px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5"
                                                         >
@@ -360,9 +359,8 @@ const CommentDetailModal = ({
                                 {/* Like */}
                                 <button
                                     onClick={handleLike}
-                                    className={`flex items-center gap-2 transition-colors ${
-                                        isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
-                                    }`}
+                                    className={`flex items-center gap-2 transition-colors ${isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                                        }`}
                                 >
                                     {isLiked ? <FaHeart size={18} /> : <FaRegHeart size={18} />}
                                 </button>

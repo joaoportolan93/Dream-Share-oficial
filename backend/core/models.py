@@ -388,6 +388,7 @@ class ConfiguracaoUsuario(models.Model):
     tema_interface = models.SmallIntegerField(choices=TEMA_INTERFACE_CHOICES, default=1)
     idioma = models.CharField(max_length=10, default='pt-BR')
     mostrar_visualizacoes = models.BooleanField(default=True)
+    mostrar_feed_algoritmico = models.BooleanField(default=True)
     ultima_atualizacao = models.DateTimeField(default=timezone.now)
 
     class Meta:

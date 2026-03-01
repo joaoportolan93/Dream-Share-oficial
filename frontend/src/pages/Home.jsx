@@ -3,7 +3,7 @@ import { FaMoon, FaPlus, FaUserFriends, FaFire } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DreamCard from '../components/DreamCard';
 import CreateDreamModal from '../components/CreateDreamModal';
-import { getDreams, getProfile } from '../services/api';
+import { getDreams, getProfile, getUserSettings } from '../services/api';
 
 const Home = () => {
     const [dreams, setDreams] = useState([]);
@@ -13,6 +13,7 @@ const Home = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDream, setEditingDream] = useState(null);
     const [activeTab, setActiveTab] = useState('following');
+    const [showAlgorithmicFeed, setShowAlgorithmicFeed] = useState(true);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -41,13 +42,35 @@ const Home = () => {
     };
 
     useEffect(() => {
-        fetchDreams();
+        const fetchInitialData = async () => {
+            try {
+                const [profileRes, settingsRes] = await Promise.all([
+                    getProfile(),
+                    getUserSettings()
+                ]);
 
-        // Get current user ID
-        getProfile().then(res => {
-            setCurrentUserId(res.data.id_usuario);
-        }).catch(console.error);
-    }, []);
+                setCurrentUserId(profileRes.data.id_usuario);
+
+                const allowForYou = settingsRes.data.mostrar_feed_algoritmico ?? true;
+                setShowAlgorithmicFeed(allowForYou);
+
+                if (!allowForYou && activeTab === 'foryou') {
+                    setActiveTab('following');
+                }
+            } catch (err) {
+                console.error('Error fetching initial data: ', err);
+                try {
+                    const res = await getProfile();
+                    setCurrentUserId(res.data.id_usuario);
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        };
+
+        fetchDreams(activeTab);
+        fetchInitialData();
+    }, []); // eslint-disable-line
 
     // Fetch dreams when tab changes
     useEffect(() => {
@@ -107,19 +130,21 @@ const Home = () => {
                         <span className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-t-full" />
                     )}
                 </button>
-                <button
-                    onClick={() => handleTabChange('foryou')}
-                    className={`flex items-center gap-2 px-6 py-4 text-base font-medium transition-all relative ${activeTab === 'foryou'
-                        ? 'text-orange-400'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                        }`}
-                >
-                    <FaFire className={activeTab === 'foryou' ? 'text-orange-400' : ''} />
-                    Para você
-                    {activeTab === 'foryou' && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-t-full" />
-                    )}
-                </button>
+                {showAlgorithmicFeed && (
+                    <button
+                        onClick={() => handleTabChange('foryou')}
+                        className={`flex items-center gap-2 px-6 py-4 text-base font-medium transition-all relative ${activeTab === 'foryou'
+                            ? 'text-orange-400'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                            }`}
+                    >
+                        <FaFire className={activeTab === 'foryou' ? 'text-orange-400' : ''} />
+                        Para você
+                        {activeTab === 'foryou' && (
+                            <span className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-t-full" />
+                        )}
+                    </button>
+                )}
             </div>
 
             {/* Loading State */}

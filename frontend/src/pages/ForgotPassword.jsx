@@ -8,6 +8,7 @@ const ForgotPassword = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [nomeUsuario, setNomeUsuario] = useState('');
+    const [respostaSecreta, setRespostaSecreta] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -34,6 +35,7 @@ const ForgotPassword = () => {
             await passwordReset({
                 email,
                 nome_usuario: nomeUsuario,
+                resposta_secreta: respostaSecreta,
                 new_password: newPassword,
             });
             setSuccess(true);
@@ -97,7 +99,7 @@ const ForgotPassword = () => {
                             transition={{ duration: 0.3 }}
                         >
                             <p className="auth-subtitle">
-                                Informe seu email e nome de usuário para redefinir sua senha
+                                Informe seu email, nome de usuário e resposta secreta para redefinir sua senha
                             </p>
 
                             {error && (
@@ -125,6 +127,14 @@ const ForgotPassword = () => {
                                     placeholder="Nome de usuário"
                                     value={nomeUsuario}
                                     onChange={(e) => setNomeUsuario(e.target.value)}
+                                    required
+                                />
+                                <input
+                                    type="text"
+                                    className="auth-input"
+                                    placeholder="Resposta secreta"
+                                    value={respostaSecreta}
+                                    onChange={(e) => setRespostaSecreta(e.target.value)}
                                     required
                                 />
                                 <input

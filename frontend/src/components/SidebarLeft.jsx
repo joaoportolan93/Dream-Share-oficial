@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaHome, FaMoon, FaUserFriends, FaBookmark, FaPlus } from 'react-icons/fa';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getTrends } from '../services/api';
 
 const SidebarLeft = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const isActive = (path) => location.pathname === path;
+
+    // State to hold trending hashtags from backend
+    const [trends, setTrends] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     const menuItems = [
         { icon: FaHome, label: 'Início', path: '/' },
@@ -14,12 +19,21 @@ const SidebarLeft = () => {
         { icon: FaBookmark, label: 'Salvos', path: '/saved' },
     ];
 
-    const trends = [
-        { tag: '#sonholucido', count: '5.234 sonhos' },
-        { tag: '#voando', count: '3.120 sonhos' },
-        { tag: '#apocalipse', count: '1.890 sonhos' },
-        { tag: '#mar', count: '1.200 sonhos' },
-    ];
+    // Fetch trends on component mount
+    useEffect(() => {
+        const fetchTrends = async () => {
+            try {
+                const res = await getTrends();
+                // We only want the top 4 hashtags for the sidebar
+                setTrends(res.data.hashtags.slice(0, 4));
+            } catch (err) {
+                console.error('Error fetching trends for sidebar:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTrends();
+    }, []);
 
     return (
         <aside className="hidden md:flex flex-col w-[250px] fixed left-0 top-[60px] bottom-0 bg-white dark:bg-cosmic-bg dark:border-white/10 p-5 overflow-y-auto border-r border-border transition-colors duration-300">
@@ -53,16 +67,24 @@ const SidebarLeft = () => {
             <div>
                 <h3 className="text-sm font-bold text-text-main dark:text-white mb-4 px-2">Tendências</h3>
                 <div className="flex flex-col gap-4 px-2">
-                    {trends.map((trend, index) => (
-                        <div key={index} className="flex flex-col cursor-pointer group">
-                            <span className="text-accent-blue font-medium text-sm group-hover:underline">
-                                {trend.tag}
-                            </span>
-                            <span className="text-xs text-text-secondary">
-                                {trend.count}
-                            </span>
+                    {loading ? (
+                        <div className="flex justify-center py-4">
+                            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                         </div>
-                    ))}
+                    ) : trends.length === 0 ? (
+                        <p className="text-xs text-text-secondary dark:text-gray-400">Nenhuma tendência no momento.</p>
+                    ) : (
+                        trends.map((trend, index) => (
+                            <div key={index} className="flex flex-col cursor-pointer group">
+                                <span className="text-accent-blue font-medium text-sm group-hover:underline">
+                                    #{trend.texto_hashtag}
+                                </span>
+                                <span className="text-xs text-text-secondary dark:text-gray-400">
+                                    {trend.contagem_uso} {trend.contagem_uso === 1 ? 'sonho' : 'sonhos'}
+                                </span>
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
         </aside>
